@@ -1,0 +1,2806 @@
+<!doctype html>
+<html lang="az">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dayanıqlı İnkişaf - Quiz Oyunu</title>
+    <style>
+      :root {
+        --primary-color: #2563eb;
+        --secondary-color: #1e40af;
+        --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+        --card-bg: rgba(255, 255, 255, 0.95);
+        --correct-color: #10b981;
+        --wrong-color: #ef4444;
+        --text-color: #1e293b;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: var(--bg-gradient);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-color);
+      }
+
+      .container {
+        width: 98%;
+        max-width: 700px;
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 30px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* Header Styles */
+      .header {
+        margin-bottom: 20px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 15px;
+      }
+
+      h1 {
+        color: var(--secondary-color);
+        font-size: 24px;
+        margin: 0;
+      }
+
+      .score-board {
+        font-size: 14px;
+        color: #64748b;
+        margin-top: 5px;
+        font-weight: 600;
+      }
+
+      /* Question Styles */
+      #question-text {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 25px;
+        color: #334155;
+        line-height: 1.4;
+      }
+
+      /* Options Styles */
+      .btn-grid {
+        display: grid;
+        gap: 12px;
+      }
+
+      .btn {
+        background: white;
+        border: 2px solid #cbd5e1;
+        border-radius: 12px;
+        padding: 15px 20px;
+        font-size: 16px;
+        color: var(--text-color);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: left;
+        position: relative;
+        outline: none;
+      }
+
+      .btn:hover:not([disabled]) {
+        background: #eff6ff;
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+      }
+
+      .btn.correct {
+        background: #d1fae5;
+        border-color: var(--correct-color);
+        color: #065f46;
+      }
+
+      .btn.wrong {
+        background: #fee2e2;
+        border-color: var(--wrong-color);
+        color: #991b1b;
+      }
+
+      /* Next Button */
+      #next-btn {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-size: 16px;
+        cursor: pointer;
+        margin-top: 25px;
+        font-weight: bold;
+        display: none; /* Hidden initially */
+        transition: background 0.3s;
+      }
+
+      #next-btn:hover {
+        background: var(--secondary-color);
+      }
+
+      /* Footer */
+      .footer {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #94a3b8;
+      }
+
+      @media screen and (max-width: 768px) {
+        .container {
+            padding: 15px; /* İçəridəki boşluğu azaldır (30px-dən 15px-ə) */
+            border-radius: 15px; /* Küncləri biraz daha yığcam edir */
+        }
+
+        /* Başlıq və sual mətnini mobildə biraz kiçildirik ki, yer tutmasın */
+        h1 {
+            font-size: 20px;
+        }
+
+        #question-text {
+            font-size: 18px; 
+            margin-bottom: 15px;
+        }
+
+        /* Düymələrin iç boşluğunu azaldırıq */
+        .btn {
+            padding: 12px 15px;
+            font-size: 15px;
+        }
+    }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>Dayanıqlı İnkişaf Quiz</h1>
+        <div class="score-board">Sual: <span id="q-number">0</span> / 300</div>
+      </div>
+
+      <div id="quiz-box">
+        <div id="question-text">Suallar yüklənir...</div>
+        <div id="answer-buttons" class="btn-grid">
+          <!-- Düymələr bura gələcək -->
+        </div>
+        <button id="next-btn">Növbəti Sual</button>
+      </div>
+
+      <div class="footer">Made in Hovsan with a few child workers<br>Epstein Production &copy;</div><br>
+    </div>
+
+    <script>
+      // --- OYUN MƏNTİQİ ---
+      const questionElement = document.getElementById("question-text");
+      const answerButtonsElement = document.getElementById("answer-buttons");
+      const nextButton = document.getElementById("next-btn");
+      const qNumberElement = document.getElementById("q-number");
+
+      let shuffledQuestions, currentQuestionIndex;
+      let score = 0;
+
+      // ----------------------------------------------------
+      // MƏLUMAT BAZASI (Data Structure)
+      // ----------------------------------------------------
+
+      const questions = [
+        {
+          question:
+            "1. 'Dayanıqlı inkişaf' (Sustainable Development) anlayışı ilk dəfə rəsmi olaraq hansı sənəddə geniş şəkildə təqdim edilmişdir?",
+          answers: [
+            { text: "A) Rio Bəyannaməsi (1992)", correct: false },
+            { text: "B) Brundtland Hesabatı (1987)", correct: true },
+            { text: "C) Paris İqlim Sazişi (2015)", correct: false },
+            { text: "D) Stokholm Konfransı (1972)", correct: false },
+          ],
+        },
+        {
+          question: "2. Dayanıqlı inkişafın üç əsas sütunu (komponenti) hansılardır?",
+          answers: [
+            { text: "A) Siyasət, İqtisadiyyat, Mədəniyyət", correct: false },
+            { text: "B) Ekoloji, Sosial, İqtisadi", correct: true },
+            { text: "C) Texnologiya, Təhsil, Səhiyyə", correct: false },
+            { text: "D) Dövlət, Özəl sektor, QHT-lər", correct: false },
+          ],
+        },
+        {
+          question: "3. BMT-nin 2015-ci ildə qəbul etdiyi Dayanıqlı İnkişaf Məqsədləri (SDG) neçə hədəfdən ibarətdir?",
+          answers: [
+            { text: "A) 10", correct: false },
+            { text: "B) 15", correct: false },
+            { text: "C) 8", correct: false },
+            { text: "D) 17", correct: true },
+          ],
+        },
+        {
+          question:
+            "4. 'İndiki nəslin ehtiyaclarını ödəyərkən gələcək nəsillərin öz ehtiyaclarını ödəmək imkanlarını təhlükə altına atmayan inkişaf' tərifi kimə aiddir?",
+          answers: [
+            { text: "A) BMT Təhlükəsizlik Şurası", correct: false },
+            { text: "B) Brundtland Komissiyası", correct: true },
+            { text: "C) Dünya Bankı", correct: false },
+            { text: "D) Ümumdünya Səhiyyə Təşkilatı", correct: false },
+          ],
+        },
+        {
+          question: "5. 1972-ci ildə keçirilən Stokholm Konfransının əsas nəticəsi nə oldu?",
+          answers: [
+            { text: "A) Paris Sazişinin imzalanması", correct: false },
+            { text: "B) BMT Ətraf Mühit Proqramının (UNEP) yaradılması", correct: true },
+            { text: "C) Dünya Ticarət Təşkilatının qurulması", correct: false },
+            { text: "D) Nüvə silahlarının qadağan edilməsi", correct: false },
+          ],
+        },
+        {
+          question: "6. 'Triple Bottom Line' (Üçlü Nəticə) modelinə görə biznesin uğuru hansı meyarlarla ölçülür?",
+          answers: [
+            { text: "A) Gəlir, Vergi, İnvestisiya", correct: false },
+            { text: "B) İnsanlar (People), Planet (Planet), Mənfəət (Profit)", correct: true },
+            { text: "C) İxrac, İdxal, ÜDM", correct: false },
+            { text: "D) Səhmdarlar, Müştərilər, Rəqiblər", correct: false },
+          ],
+        },
+        {
+          question: "7. Qlobal ekoloji idarəetmədə UNEP-in əsas funksiyası nədir?",
+          answers: [
+            { text: "A) Bank kreditləri vermək", correct: false },
+            { text: "B) Qlobal ekoloji gündəliyi müəyyənləşdirmək və koordinasiya etmək", correct: true },
+            { text: "C) Ticarət qaydalarını tənzimləmək", correct: false },
+            { text: "D) Hərbi münaqişələri həll etmək", correct: false },
+          ],
+        },
+        {
+          question: "8. 'Nəsillərarası ədalət' prinsipi nəyi ifadə edir?",
+          answers: [
+            { text: "A) Yaşlılara hörmət etməyi", correct: false },
+            { text: "B) İndiki nəslin gələcək nəsillərə tükənmiş və çirklənmiş bir dünya qoymamasını", correct: true },
+            { text: "C) Təhsilin pulsuz olmasını", correct: false },
+            { text: "D) Pensiya yaşının artırılmasını", correct: false },
+          ],
+        },
+        {
+          question: "9. 'Yumşaq hüquq' (Soft Law) alətlərinə (məsələn, SDG-lər) xarakterik olan nədir?",
+          answers: [
+            { text: "A) Məcburi hüquqi qüvvəyə malikdir", correct: false },
+            { text: "B) Hüquqi cəhətdən məcburi deyil, lakin mənəvi/siyasi öhdəlik yaradır", correct: true },
+            { text: "C) Yalnız hərbçilərə aiddir", correct: false },
+            { text: "D) Heç kim əməl etmir", correct: false },
+          ],
+        },
+        {
+          question: "10. Rio Bəyannaməsi (1992) hansı əsas konfransda qəbul edilmişdir?",
+          answers: [
+            { text: "A) Yer Sammiti (Earth Summit)", correct: true },
+            { text: "B) Kioto Protokolu", correct: false },
+            { text: "C) Paris Konfransı", correct: false },
+            { text: "D) Davos Forumu", correct: false },
+          ],
+        },
+        {
+          question: "11. 'Ehtiyacların ödənilməsi' prinsipi dayanıqlı inkişafda xüsusilə kimləri hədəfləyir?",
+          answers: [
+            { text: "A) Zəngin ölkələri", correct: false },
+            { text: "B) Yoxsul təbəqələri və inkişaf etməkdə olan ölkələri", correct: true },
+            { text: "C) Yalnız tələbələri", correct: false },
+            { text: "D) Bankirləri", correct: false },
+          ],
+        },
+        {
+          question: "12. 2002-ci ildə Yohannesburqda keçirilən sammit necə adlanırdı?",
+          answers: [
+            { text: "A) İqlim Sammiti", correct: false },
+            { text: "B) Dayanıqlı İnkişaf üzrə Dünya Sammiti (WSSD)", correct: true },
+            { text: "C) Nüvə Təhlükəsizliyi Sammiti", correct: false },
+            { text: "D) G20 Sammiti", correct: false },
+          ],
+        },
+        {
+          question: "13. Qlobal ekoloji idarəetmədə 'fragmentasiya' nə deməkdir?",
+          answers: [
+            { text: "A) Torpaqların bölünməsi", correct: false },
+            { text: "B) Çoxsaylı təşkilatların eyni məsələ ilə koordinasiyasız məşğul olması", correct: true },
+            { text: "C) Ölkələrin birləşməsi", correct: false },
+            { text: "D) Ozon qatının deşilməsi", correct: false },
+          ],
+        },
+        {
+          question: "14. BMT-nin Dayanıqlı İnkişaf Məqsədlərinin icra müddəti hansı ildir?",
+          answers: [
+            { text: "A) 2025", correct: false },
+            { text: "B) 2030", correct: true },
+            { text: "C) 2050", correct: false },
+            { text: "D) 2100", correct: false },
+          ],
+        },
+        {
+          question: "15. 'Siyasət uyğunluğu' (Policy Coherence) nədir?",
+          answers: [
+            { text: "A) Bütün nazirliklərin eyni binada olması", correct: false },
+            { text: "B) İqtisadi, sosial və ekoloji siyasətlərin bir-birinə zidd olmaması", correct: true },
+            { text: "C) Yalnız bir siyasətçinin qərar verməsi", correct: false },
+            { text: "D) Siyasətin heç vaxt dəyişməməsi", correct: false },
+          ],
+        },
+        {
+          question: "16. 2015-ci il Paris Sazişinin əsas hədəfi nədir?",
+          answers: [
+            { text: "A) Qlobal temperatur artımını 2°C-dən aşağı saxlamaq", correct: true },
+            { text: "B) Plastik tullantıları qadağan etmək", correct: false },
+            { text: "C) Neft hasilatını artırmaq", correct: false },
+            { text: "D) Bütün meşələri qırmaq", correct: false },
+          ],
+        },
+        {
+          question: "17. Hansı qaz istixana effektinə ən çox töhfə verir?",
+          answers: [
+            { text: "A) Oksigen", correct: false },
+            { text: "B) Karbon dioksid (CO2)", correct: true },
+            { text: "C) Helium", correct: false },
+            { text: "D) Azot", correct: false },
+          ],
+        },
+        {
+          question: "18. 'Qlobal Şimal' və 'Qlobal Cənub' arasındakı əsas fərq nədir?",
+          answers: [
+            { text: "A) Saat qurşağı fərqi", correct: false },
+            { text: "B) İnkişaf səviyyəsi, resurs bölgüsü və texnoloji imkanlar", correct: true },
+            { text: "C) Yalnız iqlim fərqi", correct: false },
+            { text: "D) Din fərqi", correct: false },
+          ],
+        },
+        {
+          question: "19. Dayanıqlı inkişafda 'mədəniyyət'in rolu necə qiymətləndirilir?",
+          answers: [
+            { text: "A) Əhəmiyyətsizdir", correct: false },
+            { text: "B) Dördüncü sütun kimi qəbul edilir", correct: true },
+            { text: "C) Yalnız turizm üçün vacibdir", correct: false },
+            { text: "D) İnkişafa mane olur", correct: false },
+          ],
+        },
+        {
+          question: "20. Hansı təşkilat dünyada ticarət qaydalarını tənzimləyir?",
+          answers: [
+            { text: "A) BMT (UN)", correct: false },
+            { text: "B) ÜTT (WTO)", correct: true },
+            { text: "C) ÜST (WHO)", correct: false },
+            { text: "D) BVF (IMF)", correct: false },
+          ],
+        },
+        {
+          question:
+            "21. Azərbaycanın ümumi su ehtiyatlarının təxminən neçə faizi ölkə hüdudlarından kənarda formalaşır?",
+          answers: [
+            { text: "A) 30%", correct: false },
+            { text: "B) 50%", correct: false },
+            { text: "C) 70%-ə qədər", correct: true },
+            { text: "D) 90%", correct: false },
+          ],
+        },
+        {
+          question: "22. Yer kürəsindəki suyun təxminən neçə faizi şirin sudur?",
+          answers: [
+            { text: "A) 10%", correct: false },
+            { text: "B) 2.5%", correct: true },
+            { text: "C) 50%", correct: false },
+            { text: "D) 70%", correct: false },
+          ],
+        },
+        {
+          question: "23. Mingəçevir su anbarının bəndinin hündürlüyü neçə metrdir?",
+          answers: [
+            { text: "A) 60 m", correct: false },
+            { text: "B) 80 m", correct: true },
+            { text: "C) 100 m", correct: false },
+            { text: "D) 120 m", correct: false },
+          ],
+        },
+        {
+          question: "24. Mingəçevir su anbarının ümumi su tutumu nə qədərdir?",
+          answers: [
+            { text: "A) 10.5 mlrd m³", correct: false },
+            { text: "B) 15.73 mlrd m³", correct: true },
+            { text: "C) 20 mlrd m³", correct: false },
+            { text: "D) 8.2 mlrd m³", correct: false },
+          ],
+        },
+        {
+          question: "25. Yuxarı Qarabağ kanalı hansı su anbarından başlayır?",
+          answers: [
+            { text: "A) Şəmkir", correct: false },
+            { text: "B) Mingəçevir", correct: true },
+            { text: "C) Yenikənd", correct: false },
+            { text: "D) Ceyranbatan", correct: false },
+          ],
+        },
+        {
+          question: "26. Su ehtiyatlarının 'sadə idarə edilməsi' nədir?",
+          answers: [
+            { text: "A) Suyun kimyəvi təmizlənməsi", correct: false },
+            { text: "B) Suyun keyfiyyəti dəyişdirilmədən istehlakçıya çatdırılması", correct: true },
+            { text: "C) Dəniz suyunun şirinləşdirilməsi", correct: false },
+            { text: "D) Çirkab suların təkrar emalı", correct: false },
+          ],
+        },
+        {
+          question: "27. Kür çayının suyu əsasən hansı məqsədlə istifadə olunur?",
+          answers: [
+            { text: "A) Yalnız balıqçılıq", correct: false },
+            { text: "B) Suvarma, energetika və su təchizatı", correct: true },
+            { text: "C) Yalnız nəqliyyat", correct: false },
+            { text: "D) Turizm", correct: false },
+          ],
+        },
+        {
+          question: "28. 'İkinci dərəcəli çirkləndirici maddələr' necə yaranır?",
+          answers: [
+            { text: "A) Birbaşa zavoddan çıxır", correct: false },
+            { text: "B) Birinci dərəcəli maddələrin suda reaksiyası nəticəsində", correct: true },
+            { text: "C) Yağış suyu ilə", correct: false },
+            { text: "D) Plastik tullantılardan", correct: false },
+          ],
+        },
+        {
+          question: "29. Dəniz sahillərinin qorunması üçün neçə kilometrlik zolaqda təsərrüfat fəaliyyəti qadağandır?",
+          answers: [
+            { text: "A) 500 metr", correct: false },
+            { text: "B) 2 km", correct: true },
+            { text: "C) 5 km", correct: false },
+            { text: "D) 10 km", correct: false },
+          ],
+        },
+        {
+          question: "30. Su obyektlərinin çirklənməsinə görə tətbiq edilən 'normativ ödəniş'in məqsədi nədir?",
+          answers: [
+            { text: "A) İşçilərin maaşını vermək", correct: false },
+            { text: "B) İqtisadi ziyanı kompensasiya etmək və çirklənməni azaltmaq", correct: true },
+            { text: "C) Suyu bahalaşdırmaq", correct: false },
+            { text: "D) Balıqları yemləmək", correct: false },
+          ],
+        },
+        {
+          question: "31. 'Su stressi' (Water Stress) nə zaman baş verir?",
+          answers: [
+            { text: "A) Su çox olanda", correct: false },
+            { text: "B) Suya olan tələbat mövcud ehtiyatlardan çox olduqda", correct: true },
+            { text: "C) Su donanda", correct: false },
+            { text: "D) Çaylar daşanda", correct: false },
+          ],
+        },
+        {
+          question: "32. Azərbaycanda yeraltı suların şirin ehtiyatlarının böyük hissəsi harada yerləşir?",
+          answers: [
+            { text: "A) Lənkəran", correct: false },
+            { text: "B) Kür çökəkliyi və Qusar-Şabran düzənliyi", correct: true },
+            { text: "C) Abşeron", correct: false },
+            { text: "D) Naxçıvan", correct: false },
+          ],
+        },
+        {
+          question: "33. İqlim dəyişikliyi su ehtiyatlarına necə təsir edir?",
+          answers: [
+            { text: "A) Su ehtiyatlarını artırır", correct: false },
+            { text: "B) Buzlaqları əridir, buxarlanmanı artırır və şirin su qıtlığı yaradır", correct: true },
+            { text: "C) Suyun dadını yaxşılaşdırır", correct: false },
+            { text: "D) Dəniz səviyyəsini aşağı salır", correct: false },
+          ],
+        },
+        {
+          question: "34. 'Evtrofikasiya' nədir?",
+          answers: [
+            { text: "A) Suyun donması", correct: false },
+            {
+              text: "B) Suda qida maddələrinin artması nəticəsində yosunların çoxalıb oksigeni azaltması",
+              correct: true,
+            },
+            { text: "C) Suyun şirinləşməsi", correct: false },
+            { text: "D) Balıqların artması", correct: false },
+          ],
+        },
+        {
+          question: "35. Su ehtiyatlarının idarə olunmasında 'hövzə prinsipi' nədir?",
+          answers: [
+            { text: "A) İnzibati rayonlara görə idarəetmə", correct: false },
+            { text: "B) Çay hövzəsinin coğrafi sərhədləri daxilində suyun vahid idarə olunması", correct: true },
+            { text: "C) Hər kəndin öz suyunu idarə etməsi", correct: false },
+            { text: "D) Yalnız böyük çayların qorunması", correct: false },
+          ],
+        },
+        {
+          question: "36. 'Virtual su' nədir?",
+          answers: [
+            { text: "A) Kompüter oyunundakı su", correct: false },
+            { text: "B) Məhsulun istehsalı üçün sərf olunan, lakin məhsulda görünməyən su", correct: true },
+            { text: "C) Xəyali su", correct: false },
+            { text: "D) Buludlardakı su", correct: false },
+          ],
+        },
+        {
+          question: "37. Azərbaycanda 'Samur-Abşeron' kanalı hansı regionun su təchizatında həlledici rol oynayır?",
+          answers: [
+            { text: "A) Gəncə", correct: false },
+            { text: "B) Bakı və Abşeron yarımadası", correct: true },
+            { text: "C) Lənkəran", correct: false },
+            { text: "D) Naxçıvan", correct: false },
+          ],
+        },
+        {
+          question: "38. 'Dəniz suyunun şirinləşdirilməsi' (Desalination) hansı çatışmazlığa malikdir?",
+          answers: [
+            { text: "A) Çox ucuzdur", correct: false },
+            { text: "B) Yüksək enerji tələb edir və bahalıdır", correct: true },
+            { text: "C) Suyu zəhərləyir", correct: false },
+            { text: "D) Yalnız qışda mümkündür", correct: false },
+          ],
+        },
+        {
+          question: "39. Suvarma əkinçiliyində suya qənaət edən ən effektiv metod hansıdır?",
+          answers: [
+            { text: "A) Selləmə suvarma", correct: false },
+            { text: "B) Damcı və yağışyağdırma üsulu", correct: true },
+            { text: "C) Arxla suvarma", correct: false },
+            { text: "D) Gecə suvarma", correct: false },
+          ],
+        },
+        {
+          question: "40. Yeraltı suların həddindən artıq istismarı nəyə səbəb ola bilər?",
+          answers: [
+            { text: "A) Torpağın məhsuldarlığının artmasına", correct: false },
+            { text: "B) Torpağın çökməsinə və suyun duzlaşmasına", correct: true },
+            { text: "C) Yağışların artmasına", correct: false },
+            { text: "D) Meşələrin artmasına", correct: false },
+          ],
+        },
+        {
+          question: "41. 'Sanitar mühafizə zonası' nədir?",
+          answers: [
+            { text: "A) Zibilxana ərazisi", correct: false },
+            { text: "B) Su mənbələrini qorumaq üçün yaradılan xüsusi rejimli ərazi", correct: true },
+            { text: "C) Park ərazisi", correct: false },
+            { text: "D) Sənaye zonası", correct: false },
+          ],
+        },
+        {
+          question: "42. Azərbaycanda su ehtiyatlarının idarə edilməsi ilə məşğul olan əsas dövlət qurumu hansıdır?",
+          answers: [
+            { text: "A) Təhsil Nazirliyi", correct: false },
+            { text: "B) Dövlət Su Ehtiyatları Agentliyi", correct: true },
+            { text: "C) Neft Şirkəti", correct: false },
+            { text: "D) Turizm Agentliyi", correct: false },
+          ],
+        },
+        {
+          question: "43. Çirkab suların təmizlənməsində 'bioloji təmizləmə' nədir?",
+          answers: [
+            { text: "A) Süzgəcdən keçirmə", correct: false },
+            { text: "B) Mikroorqanizmlər vasitəsilə üzvi maddələrin parçalanması", correct: true },
+            { text: "C) Xlorlama", correct: false },
+            { text: "D) Qaynatma", correct: false },
+          ],
+        },
+        {
+          question: "44. Su obyektinə atılan tullantı suların 'limitdən artıq' olması halında nə baş verir?",
+          answers: [
+            { text: "A) Müəssisə mükafatlandırılır", correct: false },
+            { text: "B) Yüksək cərimə və ya sanksiya tətbiq edilir", correct: true },
+            { text: "C) Heç nə olmur", correct: false },
+            { text: "D) Vergi azalır", correct: false },
+          ],
+        },
+        {
+          question: "45. Xəzər dənizinin səviyyəsinin dəyişməsi əsasən nədən asılıdır?",
+          answers: [
+            { text: "A) Yalnız insan fəaliyyətindən", correct: false },
+            { text: "B) İqlim dəyişikliyi, buxarlanma və çay axımlarının həcmindən", correct: true },
+            { text: "C) Gəmilərin sayından", correct: false },
+            { text: "D) Neft hasilatından", correct: false },
+          ],
+        },
+        {
+          question: "46. 2022-ci il statistikasına görə, dünyada ən çox Günəş enerjisi gücünə malik ölkə hansıdır?",
+          answers: [
+            { text: "A) ABŞ", correct: false },
+            { text: "B) Çin", correct: true },
+            { text: "C) Almaniya", correct: false },
+            { text: "D) Hindistan", correct: false },
+          ],
+        },
+        {
+          question: "47. Külək turbinlərinin quşlara zərərini azaltmaq üçün hansı tədbir görülə bilər?",
+          answers: [
+            { text: "A) Turbinləri rəngləmək", correct: false },
+            { text: "B) Miqrasiya dövründə turbinlərin sürətini azaltmaq", correct: true },
+            { text: "C) Turbinləri yalnız gecə işlətmək", correct: false },
+            { text: "D) Səs ucaltmaq", correct: false },
+          ],
+        },
+        {
+          question: "48. Geotermal enerjinin əsas üstünlüyü nədir?",
+          answers: [
+            { text: "A) Yalnız yayda işləyir", correct: false },
+            { text: "B) Baza yükü (24/7) təmin edə bilir və emissiyası azdır", correct: true },
+            { text: "C) Külək tələb edir", correct: false },
+            { text: "D) Yalnız dənizdə olur", correct: false },
+          ],
+        },
+        {
+          question: "49. Bioenerji istehsalında ən çox istifadə olunan maye yanacaqlar hansılardır?",
+          answers: [
+            { text: "A) Benzin, Kerosin", correct: false },
+            { text: "B) Etanol və Biodizel", correct: true },
+            { text: "C) Mazut", correct: false },
+            { text: "D) Hidrogen", correct: false },
+          ],
+        },
+        {
+          question: "50. 2050-ci ilə qədər 'Xalis Sıfır' ssenarisində hansı enerji növü dominant olmalıdır?",
+          answers: [
+            { text: "A) Kömür", correct: false },
+            { text: "B) Bərpa olunan enerji (günəş, külək)", correct: true },
+            { text: "C) Neft", correct: false },
+            { text: "D) Nüvə", correct: false },
+          ],
+        },
+        {
+          question: "51. 'Enerji Təhlükəsizliyi' nədir?",
+          answers: [
+            { text: "A) Pulsuz enerji", correct: false },
+            { text: "B) Sabit, fasiləsiz və münasib qiymətə enerji təchizatı", correct: true },
+            { text: "C) Yalnız yerli enerji", correct: false },
+            { text: "D) İxracı dayandırmaq", correct: false },
+          ],
+        },
+        {
+          question: "52. CCS (Carbon Capture and Storage) texnologiyası nədir?",
+          answers: [
+            { text: "A) Karbonu yandırmaq", correct: false },
+            { text: "B) Atmosferə atılan CO2-ni tutub yeraltı laylarda saxlamaq", correct: true },
+            { text: "C) Karbonu satmaq", correct: false },
+            { text: "D) Ağac əkmək", correct: false },
+          ],
+        },
+        {
+          question: "53. Elektrikli avtomobillərin (EV) artması enerji sisteminə necə təsir edir?",
+          answers: [
+            { text: "A) Neftə tələbatı artırır", correct: false },
+            { text: "B) Elektrik şəbəkəsinə yükü artırır", correct: true },
+            { text: "C) Təsir etmir", correct: false },
+            { text: "D) Kömürü artırır", correct: false },
+          ],
+        },
+        {
+          question: "54. 'Qalıq yanacaqların' əsas mənfi cəhəti nədir?",
+          answers: [
+            { text: "A) Bahalı olması", correct: false },
+            { text: "B) Bərpa olunmayan olması və yüksək emissiya yaratması", correct: true },
+            { text: "C) Daşınmasının çətinliyi", correct: false },
+            { text: "D) Enerjisinin azlığı", correct: false },
+          ],
+        },
+        {
+          question: "55. Günəş panellərinin (PV) istehsalında dünya lideri hansı ölkədir?",
+          answers: [
+            { text: "A) ABŞ", correct: false },
+            { text: "B) Çin", correct: true },
+            { text: "C) Almaniya", correct: false },
+            { text: "D) Yaponiya", correct: false },
+          ],
+        },
+        {
+          question: "56. Hansı enerji mənbəyi 'fasiləli' (intermittent) hesab olunur?",
+          answers: [
+            { text: "A) Nüvə enerjisi", correct: false },
+            { text: "B) Günəş və Külək", correct: true },
+            { text: "C) Geotermal", correct: false },
+            { text: "D) Təbii qaz", correct: false },
+          ],
+        },
+        {
+          question: "57. Azərbaycanda 'Qarabağ və Şərqi Zəngəzur' bölgəsi enerji baxımından necə adlandırılır?",
+          answers: [
+            { text: "A) Sənaye zonası", correct: false },
+            { text: "B) Yaşıl Enerji Zonası", correct: true },
+            { text: "C) Neft zonası", correct: false },
+            { text: "D) Azad ticarət zonası", correct: false },
+          ],
+        },
+        {
+          question: "58. 'Enerji səmərəliliyi' ilə 'Enerjiyə qənaət' arasındakı fərq nədir?",
+          answers: [
+            { text: "A) Fərq yoxdur", correct: false },
+            { text: "B) Səmərəlilik texnologiyadır, qənaət davranışdır", correct: true },
+            { text: "C) Səmərəlilik pulsuzdur", correct: false },
+            { text: "D) Qənaət texnologiyadır", correct: false },
+          ],
+        },
+        {
+          question: "59. Biokütlə enerjisinin mənfi tərəfi nə ola bilər?",
+          answers: [
+            { text: "A) Heç bir mənfi tərəfi yoxdur", correct: false },
+            { text: "B) Ərzaq istehsalı ilə rəqabət apara bilər", correct: true },
+            { text: "C) Çox bahalıdır", correct: false },
+            { text: "D) Enerji vermir", correct: false },
+          ],
+        },
+        {
+          question: "60. Hidroenergetikanın sosial təsiri nə ola bilər?",
+          answers: [
+            { text: "A) Yalnız müsbətdir", correct: false },
+            { text: "B) İcmaların köçürülməsi və ekosistemin dəyişməsi", correct: true },
+            { text: "C) Şəhərlərin boşalması", correct: false },
+            { text: "D) İşsizlik", correct: false },
+          ],
+        },
+        {
+          question: "61. 'Peak Oil' (Pik Neft) nəzəriyyəsi nədir?",
+          answers: [
+            { text: "A) Neftin bitməyəcəyini deyir", correct: false },
+            { text: "B) Neft hasilatının maksimuma çatıb sonra azalacağını proqnozlaşdırır", correct: true },
+            { text: "C) Neftin qiymətinin artacağını deyir", correct: false },
+            { text: "D) Neftin rəngini dəyişir", correct: false },
+          ],
+        },
+        {
+          question: "62. Hansı qaz 'təbii qaz'ın əsas tərkib hissəsidir?",
+          answers: [
+            { text: "A) Propan", correct: false },
+            { text: "B) Metan (CH4)", correct: true },
+            { text: "C) Butan", correct: false },
+            { text: "D) Oksigen", correct: false },
+          ],
+        },
+        {
+          question: "63. Nüvə enerjisinin əsas ekoloji üstünlüyü nədir?",
+          answers: [
+            { text: "A) Tullantısı yoxdur", correct: false },
+            { text: "B) İstixana qazı (CO2) emissiyası yoxdur", correct: true },
+            { text: "C) Ucuzdur", correct: false },
+            { text: "D) Təhlükəsizdir", correct: false },
+          ],
+        },
+        {
+          question: "64. 'Yaşıl Hidrogen' necə istehsal olunur?",
+          answers: [
+            { text: "A) Kömürdən", correct: false },
+            { text: "B) Suyun elektrolizi (bərpa olunan enerji ilə)", correct: true },
+            { text: "C) Təbii qazdan", correct: false },
+            { text: "D) Neftdən", correct: false },
+          ],
+        },
+        {
+          question: "65. 'Bunker yanacağı' harada istifadə olunur?",
+          answers: [
+            { text: "A) Təyyarələrdə", correct: false },
+            { text: "B) Gəmilərdə", correct: true },
+            { text: "C) Avtomobillərdə", correct: false },
+            { text: "D) Evlərdə", correct: false },
+          ],
+        },
+        {
+          question: "66. Azərbaycanda külək enerjisi potensialı ən çox haradadır?",
+          answers: [
+            { text: "A) Lənkəran", correct: false },
+            { text: "B) Bakı, Abşeron və Xızı", correct: true },
+            { text: "C) Şəki", correct: false },
+            { text: "D) Quba", correct: false },
+          ],
+        },
+        {
+          question: "67. 'Stranded Assets' nədir?",
+          answers: [
+            { text: "A) Köhnə pullar", correct: false },
+            { text: "B) Gələcəkdə istifadəsi mümkün olmayacaq qalıq yanacaq ehtiyatları", correct: true },
+            { text: "C) İtmiş əşyalar", correct: false },
+            { text: "D) Xarici valyuta", correct: false },
+          ],
+        },
+        {
+          question: "68. 'REPowerEU' planının məqsədi nədir?",
+          answers: [
+            { text: "A) Rusiyadan enerji asılılığını azaltmaq", correct: true },
+            { text: "B) Kömürdən istifadəni artırmaq", correct: false },
+            { text: "C) Enerjini bahalaşdırmaq", correct: false },
+            { text: "D) Nüvə silahı istehsal etmək", correct: false },
+          ],
+        },
+        {
+          question: "69. Bərpa olunan enerjinin şəbəkəyə inteqrasiyasında əsas çətinlik nədir?",
+          answers: [
+            { text: "A) Çox bahalı olması", correct: false },
+            { text: "B) Sabit olmaması (hava şəraitindən asılılıq)", correct: true },
+            { text: "C) Rənginin pis olması", correct: false },
+            { text: "D) Səs-küy salması", correct: false },
+          ],
+        },
+        {
+          question: "70. Enerji auditinin məqsədi nədir?",
+          answers: [
+            { text: "A) Cərimə yazmaq", correct: false },
+            { text: "B) Enerji itkilərini və səmərəlilik imkanlarını tapmaq", correct: true },
+            { text: "C) İşçiləri yoxlamaq", correct: false },
+            { text: "D) Sayğacı dəyişmək", correct: false },
+          ],
+        },
+        {
+          question: "71. 'Offshore' külək enerjisi nə deməkdir?",
+          answers: [
+            { text: "A) Dağda tikilən stansiyalar", correct: false },
+            { text: "B) Dənizdə quraşdırılan külək turbinləri", correct: true },
+            { text: "C) Şəhər mərkəzində", correct: false },
+            { text: "D) Kənddə", correct: false },
+          ],
+        },
+        {
+          question: "72. İstilik nasosları (Heat Pumps) necə işləyir?",
+          answers: [
+            { text: "A) Qaz yandırır", correct: false },
+            { text: "B) Elektriklə istiliyi bir yerdən digərinə köçürür", correct: true },
+            { text: "C) Kömür yandırır", correct: false },
+            { text: "D) Su qaynadır", correct: false },
+          ],
+        },
+        {
+          question: "73. 'Smart Meter' (Ağıllı Sayğac) nədir?",
+          answers: [
+            { text: "A) Yalnız enerji ölçən cihaz", correct: false },
+            { text: "B) Real vaxtda ölçən və mərkəzə məlumat ötürən rəqəmsal cihaz", correct: true },
+            { text: "C) Su sayğacı", correct: false },
+            { text: "D) Qaz sayğacı", correct: false },
+          ],
+        },
+        {
+          question: "74. Enerji sektorunda 'dekarbonizasiya' nə deməkdir?",
+          answers: [
+            { text: "A) Karbonu artırmaq", correct: false },
+            { text: "B) Karbon emissiyalarını azaltmaq və sıfıra endirmək", correct: true },
+            { text: "C) Kömürü rəngləmək", correct: false },
+            { text: "D) Meşələri qırmaq", correct: false },
+          ],
+        },
+        {
+          question: "75. 'Enerji yoxsulluğu' nədir?",
+          answers: [
+            { text: "A) Pulun olmaması", correct: false },
+            { text: "B) Müasir enerji xidmətlərinə çıxışın olmaması", correct: true },
+            { text: "C) Neftin bitməsi", correct: false },
+            { text: "D) Qazın kəsilməsi", correct: false },
+          ],
+        },
+        {
+          question: "76. 'Dəqiq əkinçilik' hansı texnologiyalara əsaslanır?",
+          answers: [
+            { text: "A) Əl əməyi", correct: false },
+            { text: "B) GPS, sensorlar, dronlar və data analitikası", correct: true },
+            { text: "C) Ənənəvi suvarma", correct: false },
+            { text: "D) Təqvimə baxmaq", correct: false },
+          ],
+        },
+        {
+          question: "77. Torpaqların 'konsolidasiyası' nədir?",
+          answers: [
+            { text: "A) Torpaqların bölünməsi", correct: false },
+            { text: "B) Kiçik torpaq sahələrinin birləşdirilməsi", correct: true },
+            { text: "C) Torpağın satılması", correct: false },
+            { text: "D) Torpağın yuyulması", correct: false },
+          ],
+        },
+        {
+          question: "78. 'Monokultura' əkini torpağa necə təsir edir?",
+          answers: [
+            { text: "A) Torpağı zənginləşdirir", correct: false },
+            { text: "B) Torpağı tükəndirir və xəstəliklərə həssaslığı artırır", correct: true },
+            { text: "C) Suya qənaət edir", correct: false },
+            { text: "D) Məhsuldarlığı artırır", correct: false },
+          ],
+        },
+        {
+          question: "79. İnteqrasiya olunmuş zərərvericilərə qarşı mübarizə (IPM) nədir?",
+          answers: [
+            { text: "A) Yalnız kimyəvi dərmanlar", correct: false },
+            { text: "B) Bioloji, fiziki və kimyəvi metodların kombinasiyası", correct: true },
+            { text: "C) Sahəni yandırmaq", correct: false },
+            { text: "D) Zərərvericiləri saxlamaq", correct: false },
+          ],
+        },
+        {
+          question: "80. Torpaq eroziyasının qarşısını almaq üçün hansı üsul istifadə olunur?",
+          answers: [
+            { text: "A) Meşələri qırmaq", correct: false },
+            { text: "B) Meşə zolaqları salmaq", correct: true },
+            { text: "C) Yamacda şaquli şumlama", correct: false },
+            { text: "D) Torpağı boş qoymaq", correct: false },
+          ],
+        },
+        {
+          question: "81. 'Şoranlaşma'nın əsas səbəbi nədir?",
+          answers: [
+            { text: "A) Yağışın çox yağması", correct: false },
+            { text: "B) Düzgün olmayan suvarma və drenaj", correct: true },
+            { text: "C) Gübrənin az olması", correct: false },
+            { text: "D) Toxumun keyfiyyətsiz olması", correct: false },
+          ],
+        },
+        {
+          question: "82. Üzvi kənd təsərrüfatının əsas şərti nədir?",
+          answers: [
+            { text: "A) Çoxlu gübrə vermək", correct: false },
+            { text: "B) Sintetik kimyəvi maddələrdən imtina etmək", correct: true },
+            { text: "C) Yalnız gecə işləmək", correct: false },
+            { text: "D) Maşın istifadə etməmək", correct: false },
+          ],
+        },
+        {
+          question: "83. Aqro-meşəbəliyyə (Agroforestry) nədir?",
+          answers: [
+            { text: "A) Meşədə ev tikmək", correct: false },
+            { text: "B) Kənd təsərrüfatı bitkiləri və heyvanların ağaclarla birgə yetişdirilməsi", correct: true },
+            { text: "C) Meşəni qırmaq", correct: false },
+            { text: "D) Odun doğramaq", correct: false },
+          ],
+        },
+        {
+          question: "84. Torpaq deqradasiyasının əsas növləri hansılardır?",
+          answers: [
+            { text: "A) Yalnız isinmə", correct: false },
+            { text: "B) Eroziya, şoranlaşma, kimyəvi çirklənmə", correct: true },
+            { text: "C) Rənginin dəyişməsi", correct: false },
+            { text: "D) Qiymətinin düşməsi", correct: false },
+          ],
+        },
+        {
+          question: "85. Damcı suvarma sisteminin üstünlüyü nədir?",
+          answers: [
+            { text: "A) Çox su sərf edir", correct: false },
+            { text: "B) Suya qənaət edir", correct: true },
+            { text: "C) Ucuzdur", correct: false },
+            { text: "D) Asan quraşdırılır", correct: false },
+          ],
+        },
+        {
+          question: "86. Pestisidlərin həddindən artıq istifadəsi nəyə səbəb olur?",
+          answers: [
+            { text: "A) Məhsulun artmasına", correct: false },
+            { text: "B) Torpağın və suyun çirklənməsinə", correct: true },
+            { text: "C) Torpağın rənginin açılmasına", correct: false },
+            { text: "D) Yağışın yağmasına", correct: false },
+          ],
+        },
+        {
+          question: "87. Torpaqdakı 'humus' nədir?",
+          answers: [
+            { text: "A) Daş", correct: false },
+            { text: "B) Üzvi maddələrin parçalanmasından yaranan münbit qat", correct: true },
+            { text: "C) Qum", correct: false },
+            { text: "D) Gil", correct: false },
+          ],
+        },
+        {
+          question: "88. 'Sıfır becərmə' (No-till) texnologiyası nədir?",
+          answers: [
+            { text: "A) Torpağı heç əkməmək", correct: false },
+            { text: "B) Torpağı şumlamadan birbaşa səpin aparmaq", correct: true },
+            { text: "C) Əl ilə əkmək", correct: false },
+            { text: "D) Traktorla əkmək", correct: false },
+          ],
+        },
+        {
+          question: "89. Kənd təsərrüfatı istixana qazlarına necə töhfə verir?",
+          answers: [
+            { text: "A) Vermir", correct: false },
+            { text: "B) Metan və azot oksidi emissiyaları ilə", correct: true },
+            { text: "C) Oksigen buraxaraq", correct: false },
+            { text: "D) Suyu buxarlandıraraq", correct: false },
+          ],
+        },
+        {
+          question: "90. Ərzaq təhlükəsizliyi (Food Security) nə deməkdir?",
+          answers: [
+            { text: "A) Yeməyi saxlamaq", correct: false },
+            { text: "B) Hamının kifayət qədər və keyfiyyətli qidaya çıxışının olması", correct: true },
+            { text: "C) Çoxlu market açmaq", correct: false },
+            { text: "D) Yeməyi qıfıllamaq", correct: false },
+          ],
+        },
+        {
+          question: "91. Ağıllı Şəbəkələrdə 'Tələbə Cavab' (Demand Response) nədir?",
+          answers: [
+            { text: "A) Şikayətə cavab", correct: false },
+            { text: "B) Pik saatlarda istehlakı azaltmaq üçün istehlakçılara siqnal göndərmək", correct: true },
+            { text: "C) Elektriki kəsmək", correct: false },
+            { text: "D) Sayğacı oxumaq", correct: false },
+          ],
+        },
+        {
+          question: "92. AMI (Advanced Metering Infrastructure) nədir?",
+          answers: [
+            { text: "A) Su borusu", correct: false },
+            { text: "B) Ağıllı sayğaclar və məlumat toplama sistemi", correct: true },
+            { text: "C) İnternet kabeli", correct: false },
+            { text: "D) Yol hərəkəti qaydası", correct: false },
+          ],
+        },
+        {
+          question: "93. Smart Grid-də 'özünü bərpa' (self-healing) nədir?",
+          answers: [
+            { text: "A) Kabelin birləşməsi", correct: false },
+            { text: "B) Qəzanı avtomatik aşkarlayıb izolyasiya etmək", correct: true },
+            { text: "C) İşçilərin təmiri", correct: false },
+            { text: "D) Kompüterin sönməsi", correct: false },
+          ],
+        },
+        {
+          question: "94. Şəbəkənin kibertəhlükəsizliyində 'şifrələmə' nə üçün lazımdır?",
+          answers: [
+            { text: "A) Sürəti artırmaq", correct: false },
+            { text: "B) Məlumatların məxfiliyini qorumaq", correct: true },
+            { text: "C) Yaddaşı təmizləmək", correct: false },
+            { text: "D) Virus yazmaq", correct: false },
+          ],
+        },
+        {
+          question: "95. 'Virtual Elektrik Stansiyası' (VPP) nədir?",
+          answers: [
+            { text: "A) Oyun", correct: false },
+            { text: "B) Paylanmış enerji resurslarının vahid idarə olunması", correct: true },
+            { text: "C) Xəyali stansiya", correct: false },
+            { text: "D) Server otağı", correct: false },
+          ],
+        },
+        {
+          question: "96. IoT ağıllı şəhərlərdə nə edir?",
+          answers: [
+            { text: "A) Oyun oynayır", correct: false },
+            { text: "B) Cihazların bir-biri ilə əlaqəsini təmin edir", correct: true },
+            { text: "C) Telefonları birləşdirir", correct: false },
+            { text: "D) Heç nə", correct: false },
+          ],
+        },
+        {
+          question: "97. Ağıllı nəqliyyat sistemlərinin əsas məqsədi nədir?",
+          answers: [
+            { text: "A) Avtomobilləri satmaq", correct: false },
+            { text: "B) Trafiki optimallaşdırmaq və tıxacları azaltmaq", correct: true },
+            { text: "C) Yolları bağlamaq", correct: false },
+            { text: "D) Sürəti artırmaq", correct: false },
+          ],
+        },
+        {
+          question: "98. 'Big Data' şəhər idarəetməsində necə istifadə olunur?",
+          answers: [
+            { text: "A) Saxlamaq üçün", correct: false },
+            { text: "B) Analitika və qərar qəbulu üçün", correct: true },
+            { text: "C) Satmaq üçün", correct: false },
+            { text: "D) Silmək üçün", correct: false },
+          ],
+        },
+        {
+          question: "99. 5G texnologiyasının ağıllı şəhərlər üçün önəmi nədir?",
+          answers: [
+            { text: "A) Zərərlidir", correct: false },
+            { text: "B) Yüksək sürətli məlumat ötürülməsi", correct: true },
+            { text: "C) Yalnız telefonla danışmaq", correct: false },
+            { text: "D) Bahalıdır", correct: false },
+          ],
+        },
+        {
+          question: "100. Ağıllı işıqlandırma sistemləri necə qənaət edir?",
+          answers: [
+            { text: "A) Sönmür", correct: false },
+            { text: "B) Hərəkət sensorları ilə işığı tənzimləyir", correct: true },
+            { text: "C) Daha parlaq yanır", correct: false },
+            { text: "D) Lampa istifadə etmir", correct: false },
+          ],
+        },
+        {
+          question: "101. SCADA sistemi nədir?",
+          answers: [
+            { text: "A) Mühasibat proqramı", correct: false },
+            { text: "B) Sənaye proseslərinə nəzarət və məlumat toplama sistemi", correct: true },
+            { text: "C) Oyun konsolu", correct: false },
+            { text: "D) Ağıllı telefon", correct: false },
+          ],
+        },
+        {
+          question: "102. V2G (Vehicle-to-Grid) texnologiyası nədir?",
+          answers: [
+            { text: "A) Maşını şarj etmək", correct: false },
+            { text: "B) Avtomobildən şəbəkəyə enerji ötürmək", correct: true },
+            { text: "C) Maşını yumaq", correct: false },
+            { text: "D) Sürətli sürmək", correct: false },
+          ],
+        },
+        {
+          question: "103. Ağıllı binalarda sensorlar nəyi ölçür?",
+          answers: [
+            { text: "A) Yalnız temperaturu", correct: false },
+            { text: "B) Temperatur, işıq, hava keyfiyyəti və hərəkəti", correct: true },
+            { text: "C) Binanın hündürlüyünü", correct: false },
+            { text: "D) İşçilərin yaşını", correct: false },
+          ],
+        },
+        {
+          question: "104. Rəqəmsal əkiz (Digital Twin) nədir?",
+          answers: [
+            { text: "A) İnsan klonu", correct: false },
+            { text: "B) Fiziki obyektin virtual modeli", correct: true },
+            { text: "C) Video oyun", correct: false },
+            { text: "D) Sosial profil", correct: false },
+          ],
+        },
+        {
+          question: "105. Blokçeyn enerjidə necə istifadə olunur?",
+          answers: [
+            { text: "A) Bitcoin üçün", correct: false },
+            { text: "B) Mərkəzləşdirilməmiş enerji ticarəti (P2P)", correct: true },
+            { text: "C) Enerjini saxlamaq", correct: false },
+            { text: "D) Kabel əvəzi", correct: false },
+          ],
+        },
+        {
+          question: "106. Mikromobillik vasitəsi hansıdır?",
+          answers: [
+            { text: "A) Avtobus", correct: false },
+            { text: "B) Elektrikli skuter", correct: true },
+            { text: "C) Yük maşını", correct: false },
+            { text: "D) Təyyarə", correct: false },
+          ],
+        },
+        {
+          question: "107. Ağıllı tullantı idarəetməsi necə işləyir?",
+          answers: [
+            { text: "A) Zibilləri yandırır", correct: false },
+            { text: "B) Sensorlar doluluq səviyyəsini xəbər verir", correct: true },
+            { text: "C) Zibilləri gizlədir", correct: false },
+            { text: "D) Əl ilə yığır", correct: false },
+          ],
+        },
+        {
+          question: "108. Ağıllı su idarəetməsi nəyə kömək edir?",
+          answers: [
+            { text: "A) Suyu rəngləməyə", correct: false },
+            { text: "B) Sızmaların aşkarlanmasına", correct: true },
+            { text: "C) Suyun qiymətini artırmağa", correct: false },
+            { text: "D) Balıq tutmağa", correct: false },
+          ],
+        },
+        {
+          question: "109. 'Ağıllı Parkinq' sistemi nədir?",
+          answers: [
+            { text: "A) Maşınları pulsuz saxlamaq", correct: false },
+            { text: "B) Sensorlar vasitəsilə boş yerləri tapmaq", correct: true },
+            { text: "C) Maşınları yumaq", correct: false },
+            { text: "D) Parkinqi bağlamaq", correct: false },
+          ],
+        },
+        {
+          question: "110. E-hökumət nədir?",
+          answers: [
+            { text: "A) Robot prezident", correct: false },
+            { text: "B) Rəqəmsal dövlət xidmətləri", correct: true },
+            { text: "C) İnternet mağaza", correct: false },
+            { text: "D) Sosial şəbəkə", correct: false },
+          ],
+        },
+        {
+          question: "111. Greenwashing-in qarşısını almaq üçün ən yaxşı üsul hansıdır?",
+          answers: [
+            { text: "A) Reklamı artırmaq", correct: false },
+            { text: "B) Şəffaflıq və müstəqil audit", correct: true },
+            { text: "C) Məlumatı gizlətmək", correct: false },
+            { text: "D) Loqonu yaşıl etmək", correct: false },
+          ],
+        },
+        {
+          question: "112. IFRS S1 standartı nəyi tələb edir?",
+          answers: [
+            { text: "A) Mühasibat balansını", correct: false },
+            { text: "B) Ümumi davamlılıq məlumatlarının açıqlanmasını", correct: true },
+            { text: "C) Vergi hesabatını", correct: false },
+            { text: "D) İşçilərin siyahısını", correct: false },
+          ],
+        },
+        {
+          question: "113. IFRS S2 standartı nəyə aiddir?",
+          answers: [
+            { text: "A) Sosial məsələlərə", correct: false },
+            { text: "B) İqlimlə bağlı risklərə", correct: true },
+            { text: "C) İdarəetməyə", correct: false },
+            { text: "D) Valyutaya", correct: false },
+          ],
+        },
+        {
+          question: "114. ESG reytinqlərindəki əsas problem nədir?",
+          answers: [
+            { text: "A) Çox dəqiqdir", correct: false },
+            { text: "B) Metodoloji fərqlər", correct: true },
+            { text: "C) Hər kəs eyni balı alır", correct: false },
+            { text: "D) Çox ucuzdur", correct: false },
+          ],
+        },
+        {
+          question: "115. Şirkətin yalandan 'karbon neytral' olduğunu deməsi nədir?",
+          answers: [
+            { text: "A) Uğur", correct: false },
+            { text: "B) Greenwashing", correct: true },
+            { text: "C) İnnovasiya", correct: false },
+            { text: "D) CSR", correct: false },
+          ],
+        },
+        {
+          question: "116. Dairəvi İqtisadiyyatda məhsulun sonu necə olmalıdır?",
+          answers: [
+            { text: "A) Zibilxana", correct: false },
+            { text: "B) Təkrar emal və ya yenidən istifadə", correct: true },
+            { text: "C) Yandırma", correct: false },
+            { text: "D) Okeana atılma", correct: false },
+          ],
+        },
+        {
+          question: "117. Xətti İqtisadiyyatın modeli necədir?",
+          answers: [
+            { text: "A) Dairəvi", correct: false },
+            { text: "B) Götür-Hazırla-At", correct: true },
+            { text: "C) Təkrar emal", correct: false },
+            { text: "D) Qənaətli", correct: false },
+          ],
+        },
+        {
+          question: "118. Sosial İnvestisiyanın xeyriyyəçilikdən fərqi nədir?",
+          answers: [
+            { text: "A) Fərqi yoxdur", correct: false },
+            { text: "B) Uzunmüddətli strateji təsir hədəfləyir", correct: true },
+            { text: "C) Xeyriyyəçilik pulsuzdur", correct: false },
+            { text: "D) İnvestisiya borcdur", correct: false },
+          ],
+        },
+        {
+          question: "119. 'Korporativ Vətəndaşlıq' nə deməkdir?",
+          answers: [
+            { text: "A) Şirkətin pasportu var", correct: false },
+            { text: "B) Şirkətin cəmiyyətdəki məsuliyyətli davranışı", correct: true },
+            { text: "C) Vergi verməmək", correct: false },
+            { text: "D) Siyasətə qoşulmaq", correct: false },
+          ],
+        },
+        {
+          question: "120. Hansı göstərici rifahı ölçür?",
+          answers: [
+            { text: "A) ÜDM", correct: false },
+            { text: "B) GPI (Həqiqi İnkişaf Göstəricisi)", correct: true },
+            { text: "C) İnflyasiya", correct: false },
+            { text: "D) Faiz dərəcəsi", correct: false },
+          ],
+        },
+        {
+          question: "121. 'Materiality' prinsipi nəyi ifadə edir?",
+          answers: [
+            { text: "A) Materialların qiymətini", correct: false },
+            { text: "B) Ən vacib məsələlərin hesabatda əks olunmasını", correct: true },
+            { text: "C) Kağızın keyfiyyətini", correct: false },
+            { text: "D) Ofis ləvazimatlarını", correct: false },
+          ],
+        },
+        {
+          question: "122. 'Yaşıl İstiqrazlar' nəyi maliyyələşdirir?",
+          answers: [
+            { text: "A) Neft quyularını", correct: false },
+            { text: "B) Ekoloji layihələri", correct: true },
+            { text: "C) Kazinoları", correct: false },
+            { text: "D) Silah istehsalını", correct: false },
+          ],
+        },
+        {
+          question: "123. Təchizat Zəncirində Davamlılıq niyə vacibdir?",
+          answers: [
+            { text: "A) Vacib deyil", correct: false },
+            { text: "B) Ekoloji izin böyük hissəsi orada yaranır", correct: true },
+            { text: "C) Ucuz mal almaq üçün", correct: false },
+            { text: "D) Təchizatçıları sıxışdırmaq üçün", correct: false },
+          ],
+        },
+        {
+          question: "124. ISO 14001 standartı nə ilə bağlıdır?",
+          answers: [
+            { text: "A) Keyfiyyət", correct: false },
+            { text: "B) Ətraf mühit idarəetmə sistemləri", correct: true },
+            { text: "C) İnformasiya", correct: false },
+            { text: "D) Qida", correct: false },
+          ],
+        },
+        {
+          question: "125. 'Davamlı Satınalma' nədir?",
+          answers: [
+            { text: "A) Ucuz mal almaq", correct: false },
+            { text: "B) Ekoloji və sosial faktorları nəzərə almaq", correct: true },
+            { text: "C) Xaricdən almaq", correct: false },
+            { text: "D) Yerli almaq", correct: false },
+          ],
+        },
+        {
+          question: "126. Korporativ idarəetmədə 'diversifikasiya' nədir?",
+          answers: [
+            { text: "A) Məhsul istehsalı", correct: false },
+            { text: "B) İdarə heyətində müxtəlifliyin olması", correct: true },
+            { text: "C) Pul qoyuluşu", correct: false },
+            { text: "D) Ofis açmaq", correct: false },
+          ],
+        },
+        {
+          question: "127. 'Sosial Lisenziya' nədir?",
+          answers: [
+            { text: "A) Rəsmi sənəd", correct: false },
+            { text: "B) Cəmiyyətin şirkəti qəbul etməsi", correct: true },
+            { text: "C) Sürücülük vəsiqəsi", correct: false },
+            { text: "D) Tikinti icazəsi", correct: false },
+          ],
+        },
+        {
+          question: "128. 'Karbon Ofset' nədir?",
+          answers: [
+            { text: "A) Karbonu silmək", correct: false },
+            { text: "B) Emissiyaları kompensasiya etmək", correct: true },
+            { text: "C) Karbonu artırmaq", correct: false },
+            { text: "D) Karbonu rəngləmək", correct: false },
+          ],
+        },
+        {
+          question: "129. Hansı sənaye Dairəvi İqtisadiyyata keçiddə çətinlik çəkir?",
+          answers: [
+            { text: "A) Proqram təminatı", correct: false },
+            { text: "B) Sürətli Moda (Fast Fashion)", correct: true },
+            { text: "C) Təhsil", correct: false },
+            { text: "D) Bankçılıq", correct: false },
+          ],
+        },
+        {
+          question: "130. 'Paylaşılan Dəyər' (CSV) nədir?",
+          answers: [
+            { text: "A) Mənfəəti bölüşmək", correct: false },
+            { text: "B) Biznes və cəmiyyət üçün ortaq dəyər yaratmaq", correct: true },
+            { text: "C) Səhmləri satmaq", correct: false },
+            { text: "D) Xeyriyyəçilik", correct: false },
+          ],
+        },
+        {
+          question: "131. Azərbaycanın 'Milli Prioritetlər 2030' sənədindəki 5-ci prioritet nədir?",
+          answers: [
+            { text: "A) Güclü ordu", correct: false },
+            { text: "B) Təmiz ətraf mühit və yaşıl artım ölkəsi", correct: true },
+            { text: "C) Kosmik sənaye", correct: false },
+            { text: "D) Neft istehsalı", correct: false },
+          ],
+        },
+        {
+          question: "132. Azərbaycanda 'Dayanıqlı İnkişaf üzrə Milli Əlaqələndirmə Şurası' nə vaxt yaradılıb?",
+          answers: [
+            { text: "A) 2000", correct: false },
+            { text: "B) 2016", correct: true },
+            { text: "C) 2020", correct: false },
+            { text: "D) 1995", correct: false },
+          ],
+        },
+        {
+          question: "133. Azərbaycan BMT-yə neçə dəfə Könüllü Milli Hesabat (VNR) təqdim edib (2024-cü ilə qədər)?",
+          answers: [
+            { text: "A) 1", correct: false },
+            { text: "B) 2", correct: false },
+            { text: "C) 3", correct: false },
+            { text: "D) 4", correct: true },
+          ],
+        },
+        {
+          question: "134. 'ASAN Xidmət' dayanıqlı inkişafın hansı prinsipinə xidmət edir?",
+          answers: [
+            { text: "A) Ekoloji qorunma", correct: false },
+            { text: "B) Şəffaf və səmərəli dövlət xidmətləri", correct: true },
+            { text: "C) Kənd təsərrüfatı", correct: false },
+            { text: "D) Sənaye", correct: false },
+          ],
+        },
+        {
+          question: "135. Qarabağda 'Ağıllı Kənd' layihəsi harada tətbiq olunub?",
+          answers: [
+            { text: "A) Şuşa", correct: false },
+            { text: "B) Ağalı (Zəngilan)", correct: true },
+            { text: "C) Laçın", correct: false },
+            { text: "D) Kəlbəcər", correct: false },
+          ],
+        },
+        {
+          question: "136. Azərbaycanın 2030-cu ilə qədər emissiyaları azaltma hədəfi nə qədərdir?",
+          answers: [
+            { text: "A) 10%", correct: false },
+            { text: "B) 20%", correct: false },
+            { text: "C) 35-40%", correct: true },
+            { text: "D) 50%", correct: false },
+          ],
+        },
+        {
+          question: "137. Xəzər Dənizinin mühafizəsi haqqında konvensiya necə adlanır?",
+          answers: [
+            { text: "A) Bakı Konvensiyası", correct: false },
+            { text: "B) Tehran Konvensiyası", correct: true },
+            { text: "C) Moskva Konvensiyası", correct: false },
+            { text: "D) Paris Konvensiyası", correct: false },
+          ],
+        },
+        {
+          question: "138. Azərbaycanda alternativ enerji potensialı harada yüksəkdir?",
+          answers: [
+            { text: "A) Meşələr", correct: false },
+            { text: "B) Abşeron, Xəzər dənizi, Naxçıvan və Qarabağ", correct: true },
+            { text: "C) Lənkəran", correct: false },
+            { text: "D) Şəki", correct: false },
+          ],
+        },
+        {
+          question: "139. 'Böyük Qayıdış' proqramının əsas ekoloji yanaşması nədir?",
+          answers: [
+            { text: "A) Asfaltlamaq", correct: false },
+            { text: "B) 'Yaşıl Enerji Zonası' konsepsiyası", correct: true },
+            { text: "C) Kömür stansiyaları", correct: false },
+            { text: "D) Meşələri qırmaq", correct: false },
+          ],
+        },
+        {
+          question: "140. Azərbaycanda 'Qida Təhlükəsizliyi Agentliyi' (AQTA) nə vaxt yaradılıb?",
+          answers: [
+            { text: "A) 1991", correct: false },
+            { text: "B) 2005", correct: false },
+            { text: "C) 2017", correct: true },
+            { text: "D) 2023", correct: false },
+          ],
+        },
+        {
+          question: "141. SOCAR-ın strategiyasında əsas hədəf nədir?",
+          answers: [
+            { text: "A) Neft satmaq", correct: false },
+            { text: "B) 'Net Zero' hədəfinə çatmaq", correct: true },
+            { text: "C) Kömür çıxarmaq", correct: false },
+            { text: "D) İşçiləri azaltmaq", correct: false },
+          ],
+        },
+        {
+          question: "142. 'Təmiz Şəhər' layihəsi hansı zavodu idarə edir?",
+          answers: [
+            { text: "A) Sumqayıt Kimya", correct: false },
+            { text: "B) Balaxanı Tullantı Yandırma Zavodu", correct: true },
+            { text: "C) Neft Emalı", correct: false },
+            { text: "D) Sement", correct: false },
+          ],
+        },
+        {
+          question: "143. Azərbaycanın SDG reytinqindəki mövqeyi (2023-24) necədir?",
+          answers: [
+            { text: "A) Sonuncu", correct: false },
+            { text: "B) Orta (50-60-cı yerlər)", correct: true },
+            { text: "C) İlk onluq", correct: false },
+            { text: "D) Məlumat yoxdur", correct: false },
+          ],
+        },
+        {
+          question: "144. 'Xudafərin' və 'Qız Qalası' SES-ləri hansı çaydadır?",
+          answers: [
+            { text: "A) Kür", correct: false },
+            { text: "B) Araz", correct: true },
+            { text: "C) Samur", correct: false },
+            { text: "D) Tərtər", correct: false },
+          ],
+        },
+        {
+          question: "145. 'AZS IWA 48:2024' standartının məqsədi nədir?",
+          answers: [
+            { text: "A) Yolları təmir etmək", correct: false },
+            { text: "B) ESG prinsiplərinin tətbiqi", correct: true },
+            { text: "C) Vergiləri artırmaq", correct: false },
+            { text: "D) Turizm", correct: false },
+          ],
+        },
+        {
+          question: "146. Azərbaycan 2024-cü ildə hansı qlobal tədbirə ev sahibliyi edib?",
+          answers: [
+            { text: "A) Eurovizion", correct: false },
+            { text: "B) Formula 1", correct: false },
+            { text: "C) COP29", correct: true },
+            { text: "D) Dünya Kuboku", correct: false },
+          ],
+        },
+        {
+          question: "147. 'Yaşıl Dünya Naminə Həmrəylik İli' hansı ildir?",
+          answers: [
+            { text: "A) 2020", correct: false },
+            { text: "B) 2023", correct: false },
+            { text: "C) 2024", correct: true },
+            { text: "D) 2025", correct: false },
+          ],
+        },
+        {
+          question: "148. Azərbaycanda torpaqların şoranlaşmasının səbəbi nədir?",
+          answers: [
+            { text: "A) Yağışın azlığı", correct: false },
+            { text: "B) Səmərəsiz suvarma və drenaj", correct: true },
+            { text: "C) Gübrə çatışmazlığı", correct: false },
+            { text: "D) Meşələr", correct: false },
+          ],
+        },
+        {
+          question: "149. KOBİA dayanıqlı inkişafa necə dəstək verir?",
+          answers: [
+            { text: "A) Böyük şirkətlərə", correct: false },
+            { text: "B) Yaşıl KOB-ları təşviq etməklə", correct: true },
+            { text: "C) Vergi yığmaqla", correct: false },
+            { text: "D) Kredit verməklə", correct: false },
+          ],
+        },
+        {
+          question: "150. 'Zəngəzur Dəhlizi'nin təsiri nədir?",
+          answers: [
+            { text: "A) Təsiri yoxdur", correct: false },
+            { text: "B) Nəqliyyat və logistikanı bərpa edərək inkişafı sürətləndirmək", correct: true },
+            { text: "C) Ekologiyanı pozmaq", correct: false },
+            { text: "D) Sərnişin daşımaq", correct: false },
+          ],
+        },
+        {
+          question: "151. 'Planetary Boundaries' nədir?",
+          answers: [
+            { text: "A) Ölkə sərhədləri", correct: false },
+            { text: "B) Yerin sistemlərinə təhlükəsiz təsir hədləri", correct: true },
+            { text: "C) Kosmos sərhədləri", correct: false },
+            { text: "D) Şəhər sərhədləri", correct: false },
+          ],
+        },
+        {
+          question: "152. SDG 5 nəyə həsr olunub?",
+          answers: [
+            { text: "A) Yoxsulluq", correct: false },
+            { text: "B) Sağlamlıq", correct: false },
+            { text: "C) Gender bərabərliyi", correct: true },
+            { text: "D) Bərabərsizlik", correct: false },
+          ],
+        },
+        {
+          question: "153. 'Urbanizasiya' nədir?",
+          answers: [
+            { text: "A) Əhalinin şəhərlərə toplanması", correct: true },
+            { text: "B) Şəhərlərin dağılması", correct: false },
+            { text: "C) Kəndə qayıdış", correct: false },
+            { text: "D) Meşə salmaq", correct: false },
+          ],
+        },
+        {
+          question: "154. 'Dayanıqlı turizm' nədir?",
+          answers: [
+            { text: "A) Oteldə qalmaq", correct: false },
+            { text: "B) Ətraf mühitə zərər verməyən turizm", correct: true },
+            { text: "C) Çox pul xərcləmək", correct: false },
+            { text: "D) Təyyarə ilə uçmaq", correct: false },
+          ],
+        },
+        {
+          question: "155. 'Fair Trade'in məqsədi nədir?",
+          answers: [
+            { text: "A) Ucuz satmaq", correct: false },
+            { text: "B) İstehsalçılara ədalətli qiymət vermək", correct: true },
+            { text: "C) Ticarəti dayandırmaq", correct: false },
+            { text: "D) Zənginlərlə ticarət", correct: false },
+          ],
+        },
+        {
+          question: "156. 'Microplastics' nədir?",
+          answers: [
+            { text: "A) Oyuncaqlar", correct: false },
+            { text: "B) Kiçik plastik hissəciklər", correct: true },
+            { text: "C) Kompüter hissələri", correct: false },
+            { text: "D) Yeni material", correct: false },
+          ],
+        },
+        {
+          question: "157. Ozon qatının funksiyası nədir?",
+          answers: [
+            { text: "A) İsitmmək", correct: false },
+            { text: "B) UV şüalarından qorumaq", correct: true },
+            { text: "C) Yağış yağdırmaq", correct: false },
+            { text: "D) Havanı təmizləmək", correct: false },
+          ],
+        },
+        {
+          question: "158. Ozon qatını nə dağıdır?",
+          answers: [
+            { text: "A) CO2", correct: false },
+            { text: "B) CFC-lər", correct: true },
+            { text: "C) Su buxarı", correct: false },
+            { text: "D) Metan", correct: false },
+          ],
+        },
+        {
+          question: "159. 'Urban Mining' nədir?",
+          answers: [
+            { text: "A) Qızıl axtarmaq", correct: false },
+            { text: "B) Elektron tullantılardan metal bərpası", correct: true },
+            { text: "C) Metro tikintisi", correct: false },
+            { text: "D) Kömür şaxtası", correct: false },
+          ],
+        },
+        {
+          question: "160. Səhralaşmaya qarşı konvensiya hansıdır?",
+          answers: [
+            { text: "A) UNFCCC", correct: false },
+            { text: "B) UNCCD", correct: true },
+            { text: "C) UNCBD", correct: false },
+            { text: "D) UNESCO", correct: false },
+          ],
+        },
+        {
+          question: "161. 'Biomimikriya' nədir?",
+          answers: [
+            { text: "A) Heyvanları təqlid etmək", correct: false },
+            { text: "B) Təbiət dizaynlarından ilham almaq", correct: true },
+            { text: "C) Biologiya dərsi", correct: false },
+            { text: "D) Robot düzəltmək", correct: false },
+          ],
+        },
+        {
+          question: "162. 'LCA' (Həyat Dövrünün Qiymətləndirilməsi) nədir?",
+          answers: [
+            { text: "A) İnsan ömrü", correct: false },
+            { text: "B) Məhsulun ətraf mühitə tam təsirinin ölçülməsi", correct: true },
+            { text: "C) Şirkət yaşı", correct: false },
+            { text: "D) Dövran", correct: false },
+          ],
+        },
+        {
+          question: "163. 'Sosial Sahibkarlıq' nədir?",
+          answers: [
+            { text: "A) Pul qazanmaq", correct: false },
+            { text: "B) Sosial problemləri həll edən biznes", correct: true },
+            { text: "C) Dövlət işi", correct: false },
+            { text: "D) Könüllülük", correct: false },
+          ],
+        },
+        {
+          question: "164. 'Sharing Economy' nümunəsi hansıdır?",
+          answers: [
+            { text: "A) Zavod", correct: false },
+            { text: "B) Uber, Airbnb", correct: true },
+            { text: "C) Market", correct: false },
+            { text: "D) Bank", correct: false },
+          ],
+        },
+        {
+          question: "165. 'Dayanıqlı İnkişaf' termini hansı hesabatla məşhurlaşdı?",
+          answers: [
+            { text: "A) Stern", correct: false },
+            { text: "B) Brundtland (1987)", correct: true },
+            { text: "C) Roma Klubu", correct: false },
+            { text: "D) IPCC", correct: false },
+          ],
+        },
+        {
+          question: "166. İqlim dəyişikliyinə 'Adaptasiya' nədir?",
+          answers: [
+            { text: "A) Emissiyanı azaltmaq", correct: false },
+            { text: "B) Dəyişən şəraitə uyğunlaşmaq", correct: true },
+            { text: "C) İqlimi dəyişmək", correct: false },
+            { text: "D) Heç nə etməmək", correct: false },
+          ],
+        },
+        {
+          question: "167. 'Mavi İqtisadiyyat' nədir?",
+          answers: [
+            { text: "A) Səma", correct: false },
+            { text: "B) Okean resurslarının dayanıqlı istifadəsi", correct: true },
+            { text: "C) Göy mallar", correct: false },
+            { text: "D) Kosmos", correct: false },
+          ],
+        },
+        {
+          question: "168. 'Degrowth' nəzəriyyəsi nə deyir?",
+          answers: [
+            { text: "A) İqtisadiyyatı məhv etmək", correct: false },
+            { text: "B) Sonsuz artımın mümkün olmadığını", correct: true },
+            { text: "C) Əhalini azaltmaq", correct: false },
+            { text: "D) Texnologiyadan imtina", correct: false },
+          ],
+        },
+        {
+          question: "169. Qlobal su istehlakının ən böyük hissəsi hansı sektordadır?",
+          answers: [
+            { text: "A) Sənaye", correct: false },
+            { text: "B) Məişət", correct: false },
+            { text: "C) Kənd təsərrüfatı", correct: true },
+            { text: "D) Energetika", correct: false },
+          ],
+        },
+        {
+          question: "170. 'Ekoloji borc günü' nədir?",
+          answers: [
+            { text: "A) Bank borcu", correct: false },
+            { text: "B) İllik resurs limitinin bitdiyi gün", correct: true },
+            { text: "C) Bayram", correct: false },
+            { text: "D) Seçki", correct: false },
+          ],
+        },
+        {
+          question: "171. 'Gender-həssas' yanaşma niyə vacibdir?",
+          answers: [
+            { text: "A) Qadınların ehtiyaclarını nəzərə almaq üçün", correct: true },
+            { text: "B) Kişiləri sıxışdırmaq üçün", correct: false },
+            { text: "C) İşə yalnız qadın götürmək üçün", correct: false },
+            { text: "D) Əhəmiyyəti yoxdur", correct: false },
+          ],
+        },
+        {
+          question: "172. 'İnklüziv Təhsil' nədir?",
+          answers: [
+            { text: "A) Ağıllı uşaqlar üçün", correct: false },
+            { text: "B) Əlilliyi olan uşaqların ümumi təhsilə inteqrasiyası", correct: true },
+            { text: "C) Özəl məktəb", correct: false },
+            { text: "D) Evdə təhsil", correct: false },
+          ],
+        },
+        {
+          question: "173. 'Bərpa olunan enerji sertifikatları' (REC) nədir?",
+          answers: [
+            { text: "A) Diplom", correct: false },
+            { text: "B) Enerjinin yaşıl mənbədən olduğunu təsdiqləyən sənəd", correct: true },
+            { text: "C) Lisenziya", correct: false },
+            { text: "D) Qəbz", correct: false },
+          ],
+        },
+        {
+          question: "174. 'Food Loss' və 'Food Waste' fərqi nədir?",
+          answers: [
+            { text: "A) Fərq yoxdur", correct: false },
+            { text: "B) Biri istehsalda, digəri istehlakda itirilir", correct: true },
+            { text: "C) İtki evdə olur", correct: false },
+            { text: "D) Tullantı tarlada olur", correct: false },
+          ],
+        },
+        {
+          question: "175. 'Dayanıqlı Moda' nəyə qarşıdır?",
+          answers: [
+            { text: "A) Gözəl geyinməyə", correct: false },
+            { text: "B) 'Fast Fashion'a", correct: true },
+            { text: "C) Pambığa", correct: false },
+            { text: "D) Modelyerlərə", correct: false },
+          ],
+        },
+        {
+          question: "176. 'Resilience' nədir?",
+          answers: [
+            { text: "A) Bərk binalar", correct: false },
+            { text: "B) Şoklara tab gətirmək qabiliyyəti", correct: true },
+            { text: "C) Varlı olmaq", correct: false },
+            { text: "D) Böyük olmaq", correct: false },
+          ],
+        },
+        {
+          question: "177. 'Ekoloji vergi islahatı' nədir?",
+          answers: [
+            { text: "A) Vergini artırmaq", correct: false },
+            { text: "B) Vergini gəlirdən çirklənməyə keçirmək", correct: true },
+            { text: "C) Vergini ləğv etmək", correct: false },
+            { text: "D) Şirkətləri yükləmək", correct: false },
+          ],
+        },
+        {
+          question: "178. 'GWP' (Qlobal İstiləşmə Potensialı) nəyi ölçür?",
+          answers: [
+            { text: "A) İstiliyi", correct: false },
+            { text: "B) Qazın istiliyi tutma qabiliyyətini", correct: true },
+            { text: "C) Günəşi", correct: false },
+            { text: "D) Suyu", correct: false },
+          ],
+        },
+        {
+          question: "179. 'İqlim Miqrantları' kimlərdir?",
+          answers: [
+            { text: "A) Turistlər", correct: false },
+            { text: "B) İqlimə görə yerini dəyişənlər", correct: true },
+            { text: "C) Alimlər", correct: false },
+            { text: "D) İşçilər", correct: false },
+          ],
+        },
+        {
+          question: "180. 'Kibertəhlükəsizlik' niyə vacibdir?",
+          answers: [
+            { text: "A) Oyun üçün", correct: false },
+            { text: "B) İnfrastrukturu qorumaq üçün", correct: true },
+            { text: "C) İnternet üçün", correct: false },
+            { text: "D) Sosial şəbəkə üçün", correct: false },
+          ],
+        },
+        {
+          question: "181. '3D çap'ın faydası nədir?",
+          answers: [
+            { text: "A) Oyuncaq", correct: false },
+            { text: "B) Tullantını azaltmaq və yerində istehsal", correct: true },
+            { text: "C) Bahalıdır", correct: false },
+            { text: "D) Yavaşdır", correct: false },
+          ],
+        },
+        {
+          question: "182. 'Blockchain' təchizatda nə edir?",
+          answers: [
+            { text: "A) Gizlilik", correct: false },
+            { text: "B) Şəffaflıq və izlənilə bilənlik", correct: true },
+            { text: "C) Qiymət artımı", correct: false },
+            { text: "D) Mürəkkəblik", correct: false },
+          ],
+        },
+        {
+          question: "183. 'Yaşıl Hidrogen'in fərqi nədir?",
+          answers: [
+            { text: "A) Rəngi", correct: false },
+            { text: "B) Bərpa olunan enerji ilə alınır", correct: true },
+            { text: "C) Boz daha təmizdir", correct: false },
+            { text: "D) Fərq yoxdur", correct: false },
+          ],
+        },
+        {
+          question: "184. 'Enerji Depolama' niyə vacibdir?",
+          answers: [
+            { text: "A) Ehtiyat", correct: false },
+            { text: "B) Bərpa olunan enerjini balanslaşdırmaq üçün", correct: true },
+            { text: "C) Satmaq", correct: false },
+            { text: "D) Gizlətmək", correct: false },
+          ],
+        },
+        {
+          question: "185. 'Just Transition' nədir?",
+          answers: [
+            { text: "A) Sürətli keçid", correct: false },
+            { text: "B) Keçid zamanı sosial ədaləti qorumaq", correct: true },
+            { text: "C) Zənginlər üçün", correct: false },
+            { text: "D) Dayandırmaq", correct: false },
+          ],
+        },
+        {
+          question: "186. 'ESG İnvestisiya' nədir?",
+          answers: [
+            { text: "A) Qumar", correct: false },
+            { text: "B) Ekoloji və sosial faktorları nəzərə alan investisiya", correct: true },
+            { text: "C) Neftə pul qoymaq", correct: false },
+            { text: "D) Qızıl", correct: false },
+          ],
+        },
+        {
+          question: "187. 'Dayanıqlı İnkişaf Məqsədləri' nə vaxt qəbul edilib?",
+          answers: [
+            { text: "A) 2000", correct: false },
+            { text: "B) 2010", correct: false },
+            { text: "C) 2015", correct: true },
+            { text: "D) 2020", correct: false },
+          ],
+        },
+        {
+          question: "188. SDG 1 nədir?",
+          answers: [
+            { text: "A) Aclıq", correct: false },
+            { text: "B) Yoxsulluğa son", correct: true },
+            { text: "C) Su", correct: false },
+            { text: "D) Təhsil", correct: false },
+          ],
+        },
+        {
+          question: "189. SDG 13 nədir?",
+          answers: [
+            { text: "A) Sülh", correct: false },
+            { text: "B) İqlim dəyişikliyi ilə mübarizə", correct: true },
+            { text: "C) Dəniz", correct: false },
+            { text: "D) Quru", correct: false },
+          ],
+        },
+        {
+          question: "190. BMT-nin qərargahı hardadır?",
+          answers: [
+            { text: "A) Paris", correct: false },
+            { text: "B) London", correct: false },
+            { text: "C) Nyu-York", correct: true },
+            { text: "D) Cenevrə", correct: false },
+          ],
+        },
+        {
+          question: "191. 'Antroposen' nədir?",
+          answers: [
+            { text: "A) Dinozavr", correct: false },
+            { text: "B) İnsanın dominant olduğu geoloji dövr", correct: true },
+            { text: "C) Buz dövrü", correct: false },
+            { text: "D) Daş dövrü", correct: false },
+          ],
+        },
+        {
+          question: "192. 'Karbon tutumu' necə baş verir?",
+          answers: [
+            { text: "A) Baş vermir", correct: false },
+            { text: "B) Meşələr və okeanlar vasitəsilə", correct: true },
+            { text: "C) Zavodla", correct: false },
+            { text: "D) Heyvanla", correct: false },
+          ],
+        },
+        {
+          question: "193. 'Downcycling' nədir?",
+          answers: [
+            { text: "A) Fərq yoxdur", correct: false },
+            { text: "B) Keyfiyyətin aşağı düşdüyü təkrar emal", correct: true },
+            { text: "C) Daha yaxşıdır", correct: false },
+            { text: "D) Kağız", correct: false },
+          ],
+        },
+        {
+          question: "194. 'Upcycling' nədir?",
+          answers: [
+            { text: "A) Atmaq", correct: false },
+            { text: "B) Tullantıdan daha dəyərli məhsul yaratmaq", correct: true },
+            { text: "C) Yandırmaq", correct: false },
+            { text: "D) Basdırmaq", correct: false },
+          ],
+        },
+        {
+          question: "195. 'Cradle to Cradle' nədir?",
+          answers: [
+            { text: "A) Uşaq", correct: false },
+            { text: "B) Tullantısız dövrə prinsipi", correct: true },
+            { text: "C) Beşik", correct: false },
+            { text: "D) Birdəfəlik", correct: false },
+          ],
+        },
+        {
+          question: "196. 'Ekoloji Sertifikatlaşdırma' nəyə kömək edir?",
+          answers: [
+            { text: "A) Qiymətə", correct: false },
+            { text: "B) İstehlakçı seçimini asanlaşdırmağa", correct: true },
+            { text: "C) Gizlətməyə", correct: false },
+            { text: "D) Vergiyə", correct: false },
+          ],
+        },
+        {
+          question: "197. 'Yaşıl İnfrastruktur' nədir?",
+          answers: [
+            { text: "A) Asfalt", correct: false },
+            { text: "B) Parklar və təbii sistemlər", correct: true },
+            { text: "C) Beton", correct: false },
+            { text: "D) Körpü", correct: false },
+          ],
+        },
+        {
+          question: "198. 'Dayanıqlı İnkişaf' terminini ilk dəfə kim işlədib?",
+          answers: [
+            { text: "A) Hans Carl von Carlowitz", correct: true },
+            { text: "B) Elon Musk", correct: false },
+            { text: "C) Bill Gates", correct: false },
+            { text: "D) Einstein", correct: false },
+          ],
+        },
+        {
+          question: "199. 'Korporativ Şəffaflıq' nədir?",
+          answers: [
+            { text: "A) Şüşə", correct: false },
+            { text: "B) Məlumatları açıq paylaşmaq", correct: true },
+            { text: "C) Sirr", correct: false },
+            { text: "D) Qapı", correct: false },
+          ],
+        },
+        {
+          question: "200. Dayanıqlı inkişafın gələcəyi nədir?",
+          answers: [
+            { text: "A) Qaranlıq", correct: false },
+            { text: "B) Əməkdaşlıq və innovasiya ilə balanslı dünya", correct: true },
+            { text: "C) Texnologiya", correct: false },
+            { text: "D) Təbiət", correct: false },
+          ],
+        },
+        {
+          question: "201. Dayanıqlı inkişafda 'Jevons Paradoksu' (Rebound Effect) nəyi ifadə edir?",
+          answers: [
+            {
+              text: "Resurs səmərəliliyi artdıqca, məhsulun maya dəyəri aşağı düşür və bu, istehlakın artmasına səbəb olaraq gözlənilən enerji qənaətini heçə endirir",
+              correct: true,
+            },
+            {
+              text: "Texnologiya inkişaf etdikcə, insanlar daha az resurs istehlak edir və bu da iqtisadiyyatın kiçilməsinə və işsizliyin artmasına gətirib çıxarır",
+              correct: false,
+            },
+            {
+              text: "Bərpa olunan enerji mənbələrinə keçid zamanı ilkin investisiya xərclərinin yüksək olması səbəbindən iqtisadi inkişafın müvəqqəti dayanması prosesidir",
+              correct: false,
+            },
+            {
+              text: "Ekoloji qanunların sərtləşməsi nəticəsində şirkətlərin istehsalı başqa ölkələrə köçürməsi və qlobal emissiyaların sabit qalması hadisəsidir",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question: "202. 'Greenhushing' (Yaşıl susqunluq) termini nəyi bildirir və 'Greenwashing'dən fərqi nədir?",
+          answers: [
+            {
+              text: "Şirkətlərin ətraf mühitə vurduğu ziyanı gizlətmək üçün sənədləri saxtalaşdırması və ictimaiyyətə yalan məlumat verməsi (Greenwashing ilə eynidir)",
+              correct: false,
+            },
+            {
+              text: "Şirkətlərin həqiqətən davamlılıq addımları atmasına baxmayaraq, tənqid olunmaqdan və ya 'greenwashing'də ittiham edilməkdən qorxaraq bu barədə danışmaması",
+              correct: true,
+            },
+            {
+              text: "Səhmdarların şirkət rəhbərliyinə təzyiq göstərərək ekoloji layihələri dayandırması və maliyyə vəsaitlərini yalnız marketinqə yönəltməsi",
+              correct: false,
+            },
+            {
+              text: "Dövlət orqanlarının şirkətlərə ekoloji hesabatları dərc etməyi qadağan etməsi və məlumatların məxfi saxlanılması siyasəti",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question: "203. ESG hesabatlılığında 'İkili Mühümlük' (Double Materiality) prinsipi nədir?",
+          answers: [
+            {
+              text: "Şirkətin yalnız maliyyə vəziyyətinə təsir edən xarici amilləri (məsələn, iqlim riskləri) nəzərə alması və hesabatda əks etdirməsi",
+              correct: false,
+            },
+            {
+              text: "Şirkətin həm xarici mühitin onun maliyyəsinə təsirini, həm də şirkətin öz fəaliyyətinin ətraf mühitə və cəmiyyətə təsirini eyni anda qiymətləndirməsi",
+              correct: true,
+            },
+            {
+              text: "Hesabatların həm yerli, həm də beynəlxalq standartlara uyğun olaraq iki fərqli dildə və formatda hazırlanması tələbi",
+              correct: false,
+            },
+            {
+              text: "Şirkətin həm öz daxili audit komitəsi, həm də kənar müstəqil auditor tərəfindən yoxlanılması zərurəti",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question: "204. Enerji sektorunda 'LCOE' (Levelized Cost of Energy) göstəricisi nəyi ölçür?",
+          answers: [
+            {
+              text: "Elektrik stansiyasının tikintisi üçün lazım olan ilkin kapitalın ümumi məbləğini",
+              correct: false,
+            },
+            {
+              text: "Bir elektrik stansiyasının bütün ömrü boyu istehsal etdiyi enerjinin vahidinin (məsələn, 1 MWh) orta xalis cari dəyərini (bütün xərclər daxil olmaqla)",
+              correct: true,
+            },
+            {
+              text: "Elektrik enerjisinin bazar qiymətinin gün ərzində ən yüksək və ən aşağı həddi arasındakı fərqi",
+              correct: false,
+            },
+            {
+              text: "Bərpa olunan enerji mənbələrinin şəbəkəyə qoşulması zamanı yaranan texniki itkilərin faiz dərəcəsini",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question: "205. Ağıllı Şəbəkələrdə (Smart Grid) 'Adalanma' (Islanding) rejimi nə deməkdir?",
+          answers: [
+            {
+              text: "Şəbəkənin dənizdəki adalara elektrik enerjisi ötürmək üçün xüsusi sualtı kabellərdən istifadə etməsi",
+              correct: false,
+            },
+            {
+              text: "Paylanmış enerji resurslarının (məsələn, mikroşəbəkənin) əsas mərkəzi şəbəkədən ayrılaraq müstəqil şəkildə enerji təchizatını davam etdirməsi",
+              correct: true,
+            },
+            {
+              text: "Sistemin həddindən artıq yüklənməsi nəticəsində bəzi regionların enerjisinin tamamilə kəsilməsi və təcrid olunması",
+              correct: false,
+            },
+            {
+              text: "Yalnız bərpa olunan enerji mənbələrindən istifadə edən və heç bir xarici əlaqəsi olmayan qapalı sistem",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question:
+            "206. 'Karbon Sərhəd Tənzimləmə Mexanizmi' (CBAM - Carbon Border Adjustment Mechanism) nəyi hədəfləyir?",
+          answers: [
+            {
+              text: "Bütün ölkələr arasında sərbəst ticarəti təşviq etmək və gömrük rüsumlarını tamamilə ləğv etmək",
+              correct: false,
+            },
+            {
+              text: "İqlim siyasəti zəif olan ölkələrdən idxal edilən məhsullara karbon vergisi tətbiq edərək, 'karbon sızması'nın qarşısını almaq",
+              correct: true,
+            },
+            {
+              text: "Yalnız Avropa İttifaqı daxilindəki şirkətlərə əlavə vergi tətbiq etməklə daxili istehsalı azaltmaq",
+              correct: false,
+            },
+            {
+              text: "Neft və qaz ixrac edən ölkələrə sanksiya tətbiq edərək onların qlobal bazara çıxışını bağlamaq",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question:
+            "207. Torpaqların deqradasiyasının qarşısını almaq üçün 'Aqroekologiya' yanaşması nəyi təklif edir?",
+          answers: [
+            {
+              text: "Məhsuldarlığı artırmaq üçün genetik modifikasiya olunmuş orqanizmlərdən (GMO) və güclü pestisidlərdən geniş istifadəni",
+              correct: false,
+            },
+            {
+              text: "Kənd təsərrüfatı sistemlərini təbii ekosistemlər kimi dizayn etməyi, biomüxtəlifliyi artırmağı və kimyəvi asılılığı azaltmağı",
+              correct: true,
+            },
+            {
+              text: "Əkin sahələrini tamamilə meşə zolaqları ilə əvəz edərək kənd təsərrüfatı fəaliyyətini dayandırmağı",
+              correct: false,
+            },
+            {
+              text: "Bütün proseslərin robotlaşdırılmasını və insan əməyinin tamamilə aradan qaldırılmasını",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question: "208. 'Decoupling' (Ayrılma) anlayışı dayanıqlı iqtisadiyyatda nəyi ifadə edir?",
+          answers: [
+            {
+              text: "İqtisadi artımın davam etməsi ilə yanaşı, ətraf mühitə vurulan ziyanın və resurs istifadəsinin azalması (bir-birindən ayrılması)",
+              correct: true,
+            },
+            {
+              text: "Ölkələrin beynəlxalq ticarət əlaqələrini kəsərək yalnız daxili resurslar hesabına inkişaf etməsi",
+              correct: false,
+            },
+            {
+              text: "Sənaye müəssisələrinin şəhər mərkəzlərindən uzaqlaşdırılaraq ayrı zonalarda yerləşdirilməsi",
+              correct: false,
+            },
+            {
+              text: "Maliyyə sektorunun real iqtisadiyyatdan ayrılaraq yalnız virtual valyutalarla fəaliyyət göstərməsi",
+              correct: false,
+            },
+          ],
+        },
+        {
+          question:
+            "209. Su ehtiyatlarının idarə olunmasında 'Mavi Su', 'Yaşıl Su' və 'Boz Su' anlayışları nəyi bildirir?",
+          answers: [
+            { text: "Dəniz suyu, Çay suyu və İçməli su", correct: false },
+            {
+              text: "Mavi (səth/yeraltı su), Yaşıl (torpaq nəmliyi/yağış), Boz (çirkləndiriciləri durulaşdırmaq üçün lazım olan su)",
+              correct: true,
+            },
+            { text: "Təmizlənmiş su, Təmizlənməmiş su və Tullantı suyu", correct: false },
+            { text: "Sənaye suyu, Kənd təsərrüfatı suyu və Məişət suyu", correct: false },
+          ],
+        },
+        {
+          question:
+            "210. Azərbaycanda 'Qarabağ və Şərqi Zəngəzur' iqtisadi rayonlarında tətbiq olunan 'Ağıllı Kənd' konsepsiyasının əsas xüsusiyyəti nədir?",
+          answers: [
+            {
+              text: "Yalnız binaların xarici görünüşünün müasir dizaynda olması və turistlərin cəlb edilməsi",
+              correct: false,
+            },
+            {
+              text: "Rəqəmsal idarəetmə, bərpa olunan enerji, enerji səmərəliliyi və yüksək sürətli internetin inteqrasiya olunmuş tətbiqi",
+              correct: true,
+            },
+            {
+              text: "Kənd təsərrüfatı fəaliyyətinin dayandırılması və ərazinin sənaye zonasına çevrilməsi",
+              correct: false,
+            },
+            { text: "Əhalinin yalnız şəhər mərkəzlərində yaşaması və kəndlərin boşaldılması", correct: false },
+          ],
+        },
+        {
+          question: "211. Şəhərsalmada 'Tranzit Yönümlü İnkişaf' (TOD - Transit Oriented Development) nədir?",
+          answers: [
+            {
+              text: "Şəhərlərarası magistral yolların genişləndirilməsi və şəxsi avtomobillər üçün daha çox parkinq yerlərinin tikilməsi",
+              correct: false,
+            },
+            {
+              text: "Yaşayış və ticarət obyektlərinin ictimai nəqliyyat qovşaqları ətrafında sıx yerləşdirilməsi ilə avtomobildən asılılığın azaldılması",
+              correct: true,
+            },
+            { text: "Yalnız yük daşımaları üçün nəzərdə tutulan xüsusi dəhlizlərin yaradılması", correct: false },
+            { text: "Şəhər mərkəzlərində bütün nəqliyyat vasitələrinin hərəkətinin qadağan edilməsi", correct: false },
+          ],
+        },
+        {
+          question: "212. 'Scope 1', 'Scope 2' və 'Scope 3' emissiyaları arasındakı fərq nədir?",
+          answers: [
+            { text: "Ölkələr, Şəhərlər və Kəndlər üzrə bölünmə", correct: false },
+            { text: "İllik, Aylıq və Gündəlik emissiya həcmləri", correct: false },
+            {
+              text: "Scope 1 (birbaşa), Scope 2 (satın alınan enerji), Scope 3 (təchizat zənciri və məhsulun istifadəsi - dolayı)",
+              correct: true,
+            },
+            { text: "Sənaye, Nəqliyyat və Məişət tullantıları", correct: false },
+          ],
+        },
+        {
+          question:
+            "213. 'Dairəvi İqtisadiyyat'da 'Planlaşdırılmış Köhnəlmə' (Planned Obsolescence) anlayışına münasibət necədir?",
+          answers: [
+            { text: "Dəstəklənir, çünki bu, istehsalı artırır və iqtisadiyyatı canlandırır", correct: false },
+            {
+              text: "Qəbul edilmir, məhsullar uzunömürlü, təmir edilə bilən və hissələrə ayrıla bilən şəkildə dizayn edilməlidir",
+              correct: true,
+            },
+            { text: "Yalnız elektronika sənayesində tətbiq olunmalıdır", correct: false },
+            { text: "Dövlət tərəfindən subsidiyalaşdırılmalıdır", correct: false },
+          ],
+        },
+        {
+          question: "214. 'Paris Sazişi'nin 6-cı maddəsi (Article 6) nəyi tənzimləyir?",
+          answers: [
+            { text: "İqlim dəyişikliyi ilə mübarizədə qadınların rolunu", correct: false },
+            {
+              text: "Karbon bazarları və ölkələr arasında emissiya azaldılması nəticələrinin (ITMO) ticarəti mexanizmlərini",
+              correct: true,
+            },
+            { text: "Bərpa olunan enerji texnologiyalarının pulsuz transferini", correct: false },
+            { text: "Okeanların çirklənməsinin qarşısının alınmasını", correct: false },
+          ],
+        },
+        {
+          question: "215. 'Yaşıl Taksonomiya' (Green Taxonomy) nədir?",
+          answers: [
+            { text: "Meşələrdə yaşayan heyvanların təsnifatı", correct: false },
+            {
+              text: "Hansı iqtisadi fəaliyyətlərin ekoloji cəhətdən davamlı olduğunu müəyyən edən vahid təsnifat sistemi",
+              correct: true,
+            },
+            { text: "Kənd təsərrüfatında istifadə olunan bitkilərin siyahısı", correct: false },
+            { text: "Vergi ödəyicilərinin kateqoriyalara bölünməsi", correct: false },
+          ],
+        },
+        {
+          question:
+            "216. Azərbaycanda 'Alternativ və Bərpa Olunan Enerji Mənbələri üzrə Dövlət Agentliyi' (AREA) tərəfindən həyata keçirilən 'Hibrid Stansiyalar' nədir?",
+          answers: [
+            { text: "Həm benzin, həm də qazla işləyən stansiyalar", correct: false },
+            {
+              text: "Müxtəlif bərpa olunan enerji mənbələrini (məsələn, günəş, külək və bioqaz) bir yerdə birləşdirən enerji sistemləri",
+              correct: true,
+            },
+            { text: "Kömür və nüvə enerjisinin birlikdə istifadəsi", correct: false },
+            { text: "Yalnız xarici investorlar tərəfindən idarə olunan stansiyalar", correct: false },
+          ],
+        },
+        {
+          question: "217. 'Sosial Sahibkarlıq'da mənfəətin istifadəsi ənənəvi biznesdən necə fərqlənir?",
+          answers: [
+            { text: "Mənfəət tamamilə səhmdarlar arasında bölünür", correct: false },
+            {
+              text: "Mənfəətin böyük hissəsi yenidən sosial missiyanın həllinə və biznesin inkişafına yatırılır",
+              correct: true,
+            },
+            { text: "Mənfəət əldə etmək qadağandır", correct: false },
+            { text: "Bütün mənfəət dövlət büdcəsinə köçürülür", correct: false },
+          ],
+        },
+        {
+          question: "218. 'Sənaye 4.0' texnologiyalarının dayanıqlı inkişafa əsas töhfəsi nədir?",
+          answers: [
+            { text: "İnsan əməyini tamamilə aradan qaldırmaq və işsizliyi artırmaq", correct: false },
+            {
+              text: "Resurs səmərəliliyini artırmaq, tullantıları azaltmaq və istehsal proseslərini optimallaşdırmaq (IoT, Big Data, AI vasitəsilə)",
+              correct: true,
+            },
+            { text: "Daha çox məhsul istehsal edərək istehlakçılığı təşviq etmək", correct: false },
+            { text: "Zavodların ölçüsünü böyütmək", correct: false },
+          ],
+        },
+        {
+          question: "219. Bərpa olunan enerjidə 'Şəbəkə Pariteti' (Grid Parity) nə deməkdir?",
+          answers: [
+            {
+              text: "Alternativ enerjinin maya dəyərinin ənənəvi şəbəkə elektrikinin qiymətinə bərabər və ya ondan ucuz olması",
+              correct: true,
+            },
+            { text: "Şəbəkədəki gərginliyin sabit qalması", correct: false },
+            { text: "Bütün ölkələrin eyni miqdarda enerji istehsal etməsi", correct: false },
+            { text: "Elektrik enerjisinin pulsuz olması", correct: false },
+          ],
+        },
+        {
+          question:
+            "220. 'ESG' reytinqlərində 'Governance' (İdarəetmə) sütununa daxil olan əsas məsələlərdən biri hansıdır?",
+          answers: [
+            { text: "Su ehtiyatlarının qorunması", correct: false },
+            {
+              text: "İdarə Heyətinin müxtəlifliyi (diversity), icraçıların maaşları və antikorrupsiya siyasəti",
+              correct: true,
+            },
+            { text: "İşçilərin könüllü fəaliyyətləri", correct: false },
+            { text: "Məhsulun qablaşdırılması", correct: false },
+          ],
+        },
+        {
+          question:
+            "221. 'Karbon tutumu' (Carbon Sequestration) zamanı 'bioloji' və 'geoloji' tutma arasındakı fərq nədir?",
+          answers: [
+            { text: "Fərq yoxdur, hər ikisi eyni prosesdir", correct: false },
+            {
+              text: "Bioloji tutma fotosintez (meşələr) vasitəsilə, geoloji tutma isə CO2-nin sənaye üsulu ilə tutulub yeraltı laylara vurulması ilə baş verir",
+              correct: true,
+            },
+            { text: "Geoloji tutma daha ucuzdur və təbii prosesdir", correct: false },
+            { text: "Bioloji tutma yalnız dənizdə baş verir", correct: false },
+          ],
+        },
+        {
+          question: "222. 'Doughnut Economics' (Simit İqtisadiyyatı) modelinin əsas ideyası nədir?",
+          answers: [
+            { text: "İnsanların daha çox şirniyyat istehlak etməsini təşviq etmək", correct: false },
+            {
+              text: "İqtisadiyyatın 'sosial təməl' (insan ehtiyacları) və 'ekoloji tavan' (planetar sərhədlər) arasında tarazlıqda inkişaf etməsi",
+              correct: true,
+            },
+            { text: "Bütün iqtisadiyyatın dairəvi şəkildə fırlanması", correct: false },
+            { text: "Yalnız qida sənayesinin inkişaf etdirilməsi", correct: false },
+          ],
+        },
+        {
+          question:
+            "223. Azərbaycanda neftlə çirklənmiş torpaqların təmizlənməsində istifadə olunan 'Bioremediasiya' üsulu nədir?",
+          answers: [
+            { text: "Torpağın qazılaraq dənizə atılması", correct: false },
+            { text: "Torpağın yandırılaraq neftdən təmizlənməsi", correct: false },
+            {
+              text: "Xüsusi mikroorqanizmlər və bitkilər vasitəsilə neft karbohidrogenlərinin parçalanması və torpağın bərpası",
+              correct: true,
+            },
+            { text: "Çirklənmiş ərazinin betonlanması", correct: false },
+          ],
+        },
+        {
+          question: "224. 'Ağıllı Müqavilələr' (Smart Contracts) enerji sektorunda necə istifadə olunur?",
+          answers: [
+            { text: "Yalnız hüquqşünaslar tərəfindən yazılır", correct: false },
+            {
+              text: "Blokçeyn texnologiyası əsasında, enerji alqı-satqısını avtomatik, şəffaf və vasitəçisiz həyata keçirmək üçün",
+              correct: true,
+            },
+            { text: "Kağız israfının qarşısını almaq üçün sənədlərin skan edilməsi", correct: false },
+            { text: "Elektrik sayğaclarının möhürlənməsi üçün", correct: false },
+          ],
+        },
+        {
+          question: "225. BMT-nin 'Qlobal Sazişi' (UN Global Compact) şirkətlərdən nəyi tələb edir?",
+          answers: [
+            { text: "BMT-yə üzvlük haqqı ödəməyi", correct: false },
+            {
+              text: "İnsan hüquqları, əmək, ətraf mühit və korrupsiya ilə mübarizə sahəsində 10 prinsipə əməl etməyi",
+              correct: true,
+            },
+            { text: "Yalnız inkişaf etməkdə olan ölkələrdə fəaliyyət göstərməyi", correct: false },
+            { text: "Siyasi partiyalara dəstək verməyi", correct: false },
+          ],
+        },
+        {
+          question: "226. 'Yaşıl İnflyasiya' (Greenflation) termini nəyi ifadə edir?",
+          answers: [
+            { text: "Yaşıl rəngli pulların dəyərdən düşməsi", correct: false },
+            {
+              text: "Ekoloji standartlara keçid və yaşıl texnologiyalara artan tələbat səbəbindən xammal və enerji qiymətlərinin artması",
+              correct: true,
+            },
+            { text: "Təbiətin qorunması nəticəsində ərzaq məhsullarının ucuzlaşması", correct: false },
+            { text: "İnflyasiyanın ətraf mühitə müsbət təsiri", correct: false },
+          ],
+        },
+        {
+          question:
+            "227. 'Urban Resilience' (Şəhər Dayanıqlılığı) kontekstində 'Süngər Şəhər' (Sponge City) konsepsiyası nədir?",
+          answers: [
+            { text: "Şəhərin təmizliyinə riayət edən xüsusi xidmət", correct: false },
+            {
+              text: "Yağış sularını udmaq, saxlamaq və təmizləmək üçün təbii infrastrukturu (parklar, keçirici səthlər) istifadə edən şəhər dizaynı",
+              correct: true,
+            },
+            { text: "Bütün binaların yumşaq materiallardan tikilməsi", correct: false },
+            { text: "Şəhərin su ehtiyatlarını tamamilə xaricdən alması", correct: false },
+          ],
+        },
+        {
+          question: "228. 'Enerji İnterneti' (Internet of Energy - IoE) nədir?",
+          answers: [
+            { text: "Enerji şirkətlərinin veb saytları", correct: false },
+            {
+              text: "Enerji istehsalı, ötürülməsi və istehlakı sistemlərinin IoT vasitəsilə birləşdirilərək avtomatlaşdırılmış şəbəkə yaradılması",
+              correct: true,
+            },
+            { text: "Elektrik xətləri vasitəsilə internetin paylanması", correct: false },
+            { text: "Yalnız günəş enerjisi istifadə edən serverlər", correct: false },
+          ],
+        },
+        {
+          question: "229. 'Ekoloji borc' (Ecological Debt) anlayışı nəyi ifadə edir?",
+          answers: [
+            { text: "Ölkənin xarici maliyyə borcu", correct: false },
+            {
+              text: "Bir ölkənin istehlak etdiyi resursların, onun öz ərazisinin bərpa edə biləcəyi bioloji tutumdan çox olması",
+              correct: true,
+            },
+            { text: "Ekoloji cərimələrin ödənilməməsi", correct: false },
+            { text: "Təbiətin insanlara borclu olması", correct: false },
+          ],
+        },
+        {
+          question: "230. Kənd təsərrüfatında 'Permakultura' (Permaculture) nədir?",
+          answers: [
+            { text: "Daimi olaraq eyni bitkini əkmək", correct: false },
+            {
+              text: "Təbii ekosistemləri təqlid edən, özü-özünü tənzimləyən və minimum tullantılı davamlı kənd təsərrüfatı dizaynı",
+              correct: true,
+            },
+            { text: "Kimyəvi gübrələrdən maksimum istifadə", correct: false },
+            { text: "Torpağın şumlanaraq hər il yenilənməsi", correct: false },
+          ],
+        },
+        {
+          question: "231. 'Embodied Carbon' (Təcəssüm olunmuş karbon) tikinti sektorunda nə deməkdir?",
+          answers: [
+            { text: "Binanın istismarı zamanı istifadə olunan istilik və işıq enerjisi", correct: false },
+            {
+              text: "Binanın tikintisi, materialların istehsalı və daşınması zamanı yaranan, lakin binanın istismarı başlamazdan əvvəl buraxılan karbon emissiyaları",
+              correct: true,
+            },
+            { text: "Binanın içindəki insanların nəfəs alarkən buraxdığı karbon", correct: false },
+            { text: "Tikinti işçilərinin istifadə etdiyi nəqliyyat", correct: false },
+          ],
+        },
+        {
+          question: "232. 'Sosial Taksonomiya'nın məqsədi nədir?",
+          answers: [
+            { text: "İnsanları sosial siniflərə bölmək", correct: false },
+            {
+              text: "İnvestorlara hansı iqtisadi fəaliyyətlərin sosial baxımdan davamlı (məsələn, layiqli əmək, insan hüquqları) olduğunu müəyyən etməyə kömək etmək",
+              correct: true,
+            },
+            { text: "Sosial şəbəkələri tənzimləmək", correct: false },
+            { text: "Vergi sistemini sadələşdirmək", correct: false },
+          ],
+        },
+        {
+          question: "233. Azərbaycanda 'Yaşıl Dəhliz' (Green Corridor) enerji layihəsi hansı məqsədi daşıyır?",
+          answers: [
+            { text: "Meşələrin içindən yol çəkmək", correct: false },
+            {
+              text: "Xəzər dənizində istehsal olunan külək enerjisinin sualtı kabel vasitəsilə Avropaya ixracını təmin etmək",
+              correct: true,
+            },
+            { text: "Şəhərdə velosiped yolları salmaq", correct: false },
+            { text: "Parklarda gəzinti zolaqları yaratmaq", correct: false },
+          ],
+        },
+        {
+          question: "234. '15-dəqiqəlik şəhər' (15-minute city) konsepsiyası nədir?",
+          answers: [
+            { text: "Şəhəri 15 dəqiqəyə gəzib qurtarmaq", correct: false },
+            {
+              text: "Sakinlərin bütün gündəlik ehtiyaclarını (iş, məktəb, mağaza, park) evlərindən 15 dəqiqəlik piyada və ya velosiped məsafəsində ödəyə bilməsi",
+              correct: true,
+            },
+            { text: "Nəqliyyatın sürət həddini artırmaq", correct: false },
+            { text: "Şəhər mərkəzində yaşamaq qadağası", correct: false },
+          ],
+        },
+        {
+          question: "235. 'E-waste' (Elektron tullantı) probleminin həllində əsas çətinlik nədir?",
+          answers: [
+            { text: "Tullantıların həcminin az olması", correct: false },
+            {
+              text: "Tərkibindəki təhlükəli maddələrin (qurğuşun, civə) ətraf mühiti zəhərləməsi və qiymətli metalların bərpasının mürəkkəb olması",
+              correct: true,
+            },
+            { text: "Elektronikanın heç vaxt xarab olmaması", correct: false },
+            { text: "İnsanların köhnə telefonlarını satmaq istəməməsi", correct: false },
+          ],
+        },
+        {
+          question: "236. 'Gender Pay Gap' (Gender Əməkhaqqı Fərqi) nəyi göstərir?",
+          answers: [
+            { text: "Qadınların kişilərdən daha çox pul xərcləməsini", correct: false },
+            {
+              text: "Eyni və ya bərabər dəyərli işi görən qadın və kişilərin orta əməkhaqqı arasındakı fərqi",
+              correct: true,
+            },
+            { text: "Kişilərin daha çox işləməsini", correct: false },
+            { text: "Qadınların işləmək istəməməsini", correct: false },
+          ],
+        },
+        {
+          question: "237. 'Bioplastik'lər həmişə ekoloji cəhətdən tam zərərsizdirmi?",
+          answers: [
+            { text: "Bəli, onlar dərhal yox olur", correct: false },
+            {
+              text: "Xeyr, bəziləri yalnız xüsusi sənaye kompostlama şəraitində parçalanır, təbiətə atıldıqda isə adi plastik kimi qala bilir",
+              correct: true,
+            },
+            { text: "Xeyr, onlar plastikdən daha zərərlidir", correct: false },
+            { text: "Bəli, onlar yeyilə bilir", correct: false },
+          ],
+        },
+        {
+          question: "238. 'Korporativ İdarəetmə'də (Governance) 'Maraqların Toqquşması' (Conflict of Interest) nədir?",
+          answers: [
+            { text: "İki işçinin dalaşması", correct: false },
+            {
+              text: "Qərar qəbul edən şəxsin şəxsi maraqlarının şirkətin maraqlarına zidd olması və ya qərarına təsir etməsi",
+              correct: true,
+            },
+            { text: "Şirkətin rəqiblərlə mübarizəsi", correct: false },
+            { text: "Müştərinin malı bəyənməməsi", correct: false },
+          ],
+        },
+        {
+          question: "239. 'Nature-based Solutions' (Təbiət əsaslı həllər) nədir?",
+          answers: [
+            { text: "Meşədə yaşamaq", correct: false },
+            {
+              text: "İqlim dəyişikliyi və fəlakət risklərini azaltmaq üçün təbii ekosistemlərin qorunması və bərpasından istifadə etmək (məsələn, daşqına qarşı manqrov meşələri)",
+              correct: true,
+            },
+            { text: "Heyvanlardan işçi qüvvəsi kimi istifadə etmək", correct: false },
+            { text: "Süni təbiət yaratmaq", correct: false },
+          ],
+        },
+        {
+          question: "240. 'Stakeholder Engagement' (Maraqlı tərəflərin cəlb edilməsi) prosesinin əsas məqsədi nədir?",
+          answers: [
+            { text: "Onlara hədiyyə vermək", correct: false },
+            {
+              text: "Qərarların qəbulu zamanı onların ehtiyaclarını və gözləntilərini öyrənmək, riskləri azaltmaq və etibarı artırmaq",
+              correct: true,
+            },
+            { text: "Yalnız səhmdarları razı salmaq", correct: false },
+            { text: "Rəqiblərin sirlərini öyrənmək", correct: false },
+          ],
+        },
+        {
+          question: "241. 'Sirkulyar Dizayn' (Circular Design) nə deməkdir?",
+          answers: [
+            { text: "Dairəvi binalar tikmək", correct: false },
+            {
+              text: "Məhsulların elə layihələndirilməsi ki, onlar asanlıqla təmir oluna, hissələrə ayrıla və təkrar emal edilə bilsin",
+              correct: true,
+            },
+            { text: "Məhsulların tez xarab olmasını təmin etmək", correct: false },
+            { text: "Yalnız təkrar emal edilmiş materialdan istifadə etmək", correct: false },
+          ],
+        },
+        {
+          question: "242. 'Qlobal Cənub' ölkələrinin iqlim dəyişikliyi ilə mübarizədə əsas tələbi nədir?",
+          answers: [
+            { text: "Sənayeləşməni dayandırmaq", correct: false },
+            {
+              text: "İqlim Ədaləti: İnkişaf etmiş ölkələrin tarixi məsuliyyəti üzərinə götürərək maliyyə və texnologiya dəstəyi verməsi",
+              correct: true,
+            },
+            { text: "Bütün emissiyaları dərhal dayandırmaq", correct: false },
+            { text: "Heç bir öhdəlik götürməmək", correct: false },
+          ],
+        },
+        {
+          question: "243. 'Dayanıqlı Maliyyə'də (Sustainable Finance) 'Taksonomiya' nəyə xidmət edir?",
+          answers: [
+            { text: "Bankların sayını artırmağa", correct: false },
+            {
+              text: "Hansı investisiyaların həqiqətən 'yaşıl' və 'davamlı' olduğunu müəyyən edən vahid dil və standartlar yaratmağa",
+              correct: true,
+            },
+            { text: "Vergiləri hesablamağa", correct: false },
+            { text: "Xarici valyuta məzənnəsini tənzimləməyə", correct: false },
+          ],
+        },
+        {
+          question: "244. 'Enerji Keçidi' (Energy Transition) prosesində 'Kömürdən İmtina' (Phase-out) niyə çətindir?",
+          answers: [
+            { text: "Çünki kömür ən təmiz enerjidir", correct: false },
+            {
+              text: "Sosial-iqtisadi səbəblər: Kömür sənayesində çalışan minlərlə insanın işsiz qalması və regionların iqtisadi tənəzzülü riski",
+              correct: true,
+            },
+            { text: "Texnoloji olaraq mümkün deyil", correct: false },
+            { text: "Günəş enerjisi kömürdən daha bahalıdır", correct: false },
+          ],
+        },
+        {
+          question:
+            "245. 'Bərk Məişət Tullantılarının' (MSW) idarə olunmasında 'poliqona basdırma' (landfilling) niyə ən son çarə hesab olunur?",
+          answers: [
+            { text: "Çünki çox yer tutur", correct: false },
+            {
+              text: "Torpaq və yeraltı suları çirkləndirir, metan qazı (güclü istixana qazı) yaradır və resursların itirilməsinə səbəb olur",
+              correct: true,
+            },
+            { text: "Çünki bahalıdır", correct: false },
+            { text: "Çünki tullantılar yox olur", correct: false },
+          ],
+        },
+        {
+          question: "246. 'İqlim Dayanıqlılığı' (Climate Resilience) infrastruktur üçün nə deməkdir?",
+          answers: [
+            { text: "Binaların daha hündür tikilməsi", correct: false },
+            {
+              text: "İnfrastrukturun ekstremal hava hadisələrinə (daşqın, istilik dalğası) tab gətirmək və funksiyasını davam etdirmək qabiliyyəti",
+              correct: true,
+            },
+            { text: "İnfrastrukturun ucuz başa gəlməsi", correct: false },
+            { text: "Yalnız qış aylarında işləməsi", correct: false },
+          ],
+        },
+        {
+          question: "247. 'Korporativ İdarəetmə'də 'Müstəqil Direktor'un rolu nədir?",
+          answers: [
+            { text: "Şirkətin gündəlik işlərini idarə etmək", correct: false },
+            {
+              text: "İdarə Heyətində obyektivliyi təmin etmək, minoritar səhmdarların hüquqlarını qorumaq və rəhbərliyə nəzarət etmək",
+              correct: true,
+            },
+            { text: "Şirkətin səhmlərini almaq", correct: false },
+            { text: "Rəqib şirkətdə işləmək", correct: false },
+          ],
+        },
+        {
+          question: "248. 'Fairwashing' nədir?",
+          answers: [
+            { text: "Paltarları təmiz yumaq", correct: false },
+            {
+              text: "Şirkətlərin özlərini əmək hüquqlarına və sosial ədalətə riayət edən kimi göstərməsi, lakin reallıqda istismarçı olması",
+              correct: true,
+            },
+            { text: "Ticarətin ədalətli olması", correct: false },
+            { text: "Rəqabətin qorunması", correct: false },
+          ],
+        },
+        {
+          question: "249. 'Bərpa Olunan Enerji İcmaları' (Renewable Energy Communities) nədir?",
+          answers: [
+            { text: "Yalnız alimlərin yaşadığı kəndlər", correct: false },
+            {
+              text: "Vətəndaşların, yerli hakimiyyətin və KOB-ların birləşərək öz enerjilərini istehsal, istehlak və paylaşdıqları qruplar",
+              correct: true,
+            },
+            { text: "Elektrik stansiyasının işçiləri", correct: false },
+            { text: "Enerji şirkətlərinin birliyi", correct: false },
+          ],
+        },
+        {
+          question:
+            "250. 'Davamlı İnkişaf üçün Təhsil'də (ESD) 'sistemli düşüncə' (systems thinking) bacarığı niyə vacibdir?",
+          answers: [
+            { text: "Daha çox məlumat əzbərləmək üçün", correct: false },
+            {
+              text: "Mürəkkəb problemləri (məs. iqlim dəyişikliyi) təcrid olunmuş şəkildə deyil, qarşılıqlı əlaqələr və bütöv sistem çərçivəsində anlamaq üçün",
+              correct: true,
+            },
+            { text: "Kompüter sistemlərini idarə etmək üçün", correct: false },
+            { text: "Riyazi tənlikləri həll etmək üçün", correct: false },
+          ],
+        },
+      ];
+
+      // ----------------------------------------------------
+      // OYUN FUNKSİYALARI
+      // ----------------------------------------------------
+
+      function startGame() {
+        // Sualları qarışdırır
+        shuffledQuestions = questions.sort(() => Math.random() - 0.5);
+        currentQuestionIndex = 0;
+        score = 0;
+        setNextQuestion();
+      }
+
+      function setNextQuestion() {
+        resetState();
+        showQuestion(shuffledQuestions[currentQuestionIndex]);
+        qNumberElement.innerText = currentQuestionIndex + 1;
+      }
+
+      function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      function showQuestion(question) {
+        questionElement.innerText = question.question;
+
+        // 1. Variantları qarışdırırıq
+        const shuffledAnswers = shuffleArray([...question.answers]);
+
+        // A, B, C, D hərfləri üçün massiv
+        const prefixes = ["A)", "B)", "C)", "D)", "E)"];
+
+        shuffledAnswers.forEach((answer, index) => {
+          const button = document.createElement("button");
+
+          // 2. Köhnə hərfi (məs: "B)") silib yenisini (məs: "A)") əlavə edirik
+          // Bu kod mətndən "A) ", "B) " hissəsini təmizləyir
+          const cleanText = answer.text.replace(/^[A-E]\)\s*/, "");
+
+          // Yeni hərfi əlavə edirik (Qarışdıqdan sonra)
+          button.innerText = `${prefixes[index]} ${cleanText}`;
+
+          button.classList.add("btn");
+
+          if (answer.correct) {
+            button.dataset.correct = answer.correct;
+          }
+          button.addEventListener("click", selectAnswer);
+          answerButtonsElement.appendChild(button);
+        });
+      }
+
+      function resetState() {
+        nextButton.style.display = "none";
+        while (answerButtonsElement.firstChild) {
+          answerButtonsElement.removeChild(answerButtonsElement.firstChild);
+        }
+      }
+
+      function selectAnswer(e) {
+        const selectedButton = e.target;
+        const correct = selectedButton.dataset.correct === "true";
+
+        setStatusClass(selectedButton, correct);
+
+        // Bütün düymələri göstər (doğrunu yaşıl, səhvi qırmızı) və deaktiv et
+        Array.from(answerButtonsElement.children).forEach((button) => {
+          setStatusClass(button, button.dataset.correct === "true");
+          button.disabled = true; // Bir dəfə kliklədikdən sonra digərlərini bağla
+        });
+
+        nextButton.style.display = "inline-block";
+      }
+
+      function setStatusClass(element, correct) {
+        clearStatusClass(element);
+        if (correct) {
+          element.classList.add("correct");
+        } else {
+          element.classList.add("wrong");
+        }
+      }
+
+      function clearStatusClass(element) {
+        element.classList.remove("correct");
+        element.classList.remove("wrong");
+      }
+
+      nextButton.addEventListener("click", () => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < questions.length) {
+          setNextQuestion();
+        } else {
+          // Oyun bitdikdə
+          questionElement.innerText = `Təbriklər! Bütün sualları bitirdiniz.`;
+          answerButtonsElement.innerHTML = `<button class="btn" onclick="location.reload()">Yenidən Başla</button>`;
+          nextButton.style.display = "none";
+        }
+      });
+
+      // Oyunu başlat (Sual siyahısı dolduqdan sonra işləyəcək)
+      window.onload = startGame; // Bunu Hissə 3-də aktivləşdirəcəyik
+    </script>
+  </body>
+</html>
