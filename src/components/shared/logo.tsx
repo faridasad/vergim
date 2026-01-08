@@ -1,15 +1,14 @@
-import headerLogo from "@/assets/images/header-logo.svg";
-import onboardingLogo from "@/assets/images/onboarding.svg";
+import innalokLogo from "@/assets/images/innalok logo.svg";
 import { cn } from "@/lib/utils";
 
 const LOGOS = {
   onboarding: {
-    src: onboardingLogo,
-    alt: "Welcome to App",
+    src: innalokLogo,
+    alt: "Innalok Logo",
   },
   header: {
-    src: headerLogo,
-    alt: "App Header Logo",
+    src: innalokLogo,
+    alt: "Innalok Logo",
   },
 } as const;
 
@@ -19,12 +18,12 @@ interface LogoProps extends Omit<React.ImgHTMLAttributes<HTMLImageElement>, "src
   variant?: LogoVariant;
 }
 
-export function Logo({ 
-  variant = "onboarding", 
-  className, 
-  ...props 
+export function Logo({
+  variant = "onboarding",
+  className,
+  ...props
 }: LogoProps) {
-  
+
   const { src, alt } = LOGOS[variant];
 
   return (

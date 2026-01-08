@@ -1,10 +1,8 @@
-import { 
-  BarChart2, 
-  PieChart, 
-  ReceiptTextIcon, 
-  Store, 
-  Wallet,
-  type LucideIcon 
+import {
+  PieChart,
+  ReceiptTextIcon,
+  Monitor,
+  type LucideIcon
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
@@ -17,6 +15,7 @@ interface NavItemConfig {
 const NAV_ITEMS: NavItemConfig[] = [
   { label: "Əsas Səhifə", icon: PieChart, to: "/home" },
   { label: "Receipts", icon: ReceiptTextIcon, to: "/receipts" },
+  { label: "Devices", icon: Monitor, to: "/local-devices" },
 ];
 
 function Tabs() {
@@ -31,8 +30,8 @@ function Tabs() {
             className: "text-primary",
           }}
         >
-          <Icon size={24} className="text-current" /> 
-          
+          <Icon size={24} className="text-current" />
+
           <span className="text-[12px] font-medium text-current">
             {label}
           </span>

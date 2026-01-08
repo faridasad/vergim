@@ -11,9 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthCallbackRouteImport } from './routes/auth-callback'
 import { Route as MainRouteImport } from './routes/_main'
-import { Route as OnboardingSplashRouteImport } from './routes/onboarding/splash'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as MainSettingsRouteImport } from './routes/_main/settings'
 import { Route as MainReceiptsRouteImport } from './routes/_main/receipts'
+import { Route as MainLocalDevicesRouteImport } from './routes/_main/local-devices'
 import { Route as MainHomeRouteImport } from './routes/_main/home'
 
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -25,9 +26,9 @@ const MainRoute = MainRouteImport.update({
   id: '/_main',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingSplashRoute = OnboardingSplashRouteImport.update({
-  id: '/onboarding/splash',
-  path: '/onboarding/splash',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MainSettingsRoute = MainSettingsRouteImport.update({
@@ -40,6 +41,11 @@ const MainReceiptsRoute = MainReceiptsRouteImport.update({
   path: '/receipts',
   getParentRoute: () => MainRoute,
 } as any)
+const MainLocalDevicesRoute = MainLocalDevicesRouteImport.update({
+  id: '/local-devices',
+  path: '/local-devices',
+  getParentRoute: () => MainRoute,
+} as any)
 const MainHomeRoute = MainHomeRouteImport.update({
   id: '/home',
   path: '/home',
@@ -47,57 +53,63 @@ const MainHomeRoute = MainHomeRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/auth-callback': typeof AuthCallbackRoute
   '/home': typeof MainHomeRoute
+  '/local-devices': typeof MainLocalDevicesRoute
   '/receipts': typeof MainReceiptsRoute
   '/settings': typeof MainSettingsRoute
-  '/onboarding/splash': typeof OnboardingSplashRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/auth-callback': typeof AuthCallbackRoute
   '/home': typeof MainHomeRoute
+  '/local-devices': typeof MainLocalDevicesRoute
   '/receipts': typeof MainReceiptsRoute
   '/settings': typeof MainSettingsRoute
-  '/onboarding/splash': typeof OnboardingSplashRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/_main': typeof MainRouteWithChildren
   '/auth-callback': typeof AuthCallbackRoute
   '/_main/home': typeof MainHomeRoute
+  '/_main/local-devices': typeof MainLocalDevicesRoute
   '/_main/receipts': typeof MainReceiptsRoute
   '/_main/settings': typeof MainSettingsRoute
-  '/onboarding/splash': typeof OnboardingSplashRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/auth-callback'
     | '/home'
+    | '/local-devices'
     | '/receipts'
     | '/settings'
-    | '/onboarding/splash'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/auth-callback'
     | '/home'
+    | '/local-devices'
     | '/receipts'
     | '/settings'
-    | '/onboarding/splash'
   id:
     | '__root__'
+    | '/'
     | '/_main'
     | '/auth-callback'
     | '/_main/home'
+    | '/_main/local-devices'
     | '/_main/receipts'
     | '/_main/settings'
-    | '/onboarding/splash'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   MainRoute: typeof MainRouteWithChildren
   AuthCallbackRoute: typeof AuthCallbackRoute
-  OnboardingSplashRoute: typeof OnboardingSplashRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,11 +128,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/onboarding/splash': {
-      id: '/onboarding/splash'
-      path: '/onboarding/splash'
-      fullPath: '/onboarding/splash'
-      preLoaderRoute: typeof OnboardingSplashRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_main/settings': {
@@ -137,6 +149,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MainReceiptsRouteImport
       parentRoute: typeof MainRoute
     }
+    '/_main/local-devices': {
+      id: '/_main/local-devices'
+      path: '/local-devices'
+      fullPath: '/local-devices'
+      preLoaderRoute: typeof MainLocalDevicesRouteImport
+      parentRoute: typeof MainRoute
+    }
     '/_main/home': {
       id: '/_main/home'
       path: '/home'
@@ -149,12 +168,14 @@ declare module '@tanstack/react-router' {
 
 interface MainRouteChildren {
   MainHomeRoute: typeof MainHomeRoute
+  MainLocalDevicesRoute: typeof MainLocalDevicesRoute
   MainReceiptsRoute: typeof MainReceiptsRoute
   MainSettingsRoute: typeof MainSettingsRoute
 }
 
 const MainRouteChildren: MainRouteChildren = {
   MainHomeRoute: MainHomeRoute,
+  MainLocalDevicesRoute: MainLocalDevicesRoute,
   MainReceiptsRoute: MainReceiptsRoute,
   MainSettingsRoute: MainSettingsRoute,
 }
@@ -162,9 +183,9 @@ const MainRouteChildren: MainRouteChildren = {
 const MainRouteWithChildren = MainRoute._addFileChildren(MainRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   MainRoute: MainRouteWithChildren,
   AuthCallbackRoute: AuthCallbackRoute,
-  OnboardingSplashRoute: OnboardingSplashRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

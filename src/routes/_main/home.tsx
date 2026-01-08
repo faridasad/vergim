@@ -28,10 +28,11 @@ function HomeComponent() {
           <span className="text-gray-500">Account Number:</span>
           <span className="font-mono font-medium">{auth.account_number}</span>
 
-          <span className="text-gray-500">Access Token:</span>
-          <span className="font-mono text-xs text-gray-400 break-all">
-            {auth.access_token.substring(0, 20)}...
-          </span>
+          <span className="text-gray-500">Name:</span>
+          <span className="font-medium">{auth.ownerInfo.name}</span>
+
+          <span className="text-gray-500">Company:</span>
+          <span className="font-medium">{auth.ownerInfo.company_name}</span>
         </div>
       </div>
 

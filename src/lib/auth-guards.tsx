@@ -12,7 +12,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     const auth = getAuthData()
 
     if (!auth) {
-      navigate({ to: '/onboarding/splash', replace: true })
+      navigate({ to: '/', replace: true })
       return
     }
 

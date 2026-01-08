@@ -5,6 +5,10 @@ const AUTH_KEY = 'invoys_auth'
 export type AuthData = {
   account_number: string
   access_token: string
+  ownerInfo: {
+    name: string
+    company_name: string
+  }
 }
 
 export function getAuthData(): AuthData | null {

@@ -1,41 +1,34 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Logo } from "../shared/logo";
 import { Button } from "../shared/button";
-import { BellRing, Settings } from "lucide-react";
-import { useState } from "react";
-import { Select } from "@/components/shared/select";
+import { LogOut } from "lucide-react";
+import { clearAuthData } from "@/lib/auth";
 
-const RESTAURANTS = [
-  { label: "Restaurant A", value: "restaurant_a" },
-  { label: "Restaurant B", value: "restaurant_b" },
-  { label: "Restaurant C", value: "restaurant_c" },
-];
 
 function Header() {
-  const [restaurant, setRestaurant] = useState<string>("restaurant_a");
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    clearAuthData()
+    navigate({ to: '/', replace: true })
+  }
+
   return (
-    <header className="px-4 flex items-center justify-between mt-6">
+    <header className="px-4 flex items-center justify-between mt-6 pb-4">
       <Link to="/home" className="flex items-center">
         <Logo variant="header" className="h-6.75 object-contain" />
-        <span className="text-[14px] text-foreground">invoys</span>
+        <span className="text-[14px] text-foreground ml-2 font-medium">innalok</span>
       </Link>
 
-{/*       <div className="flex items-center gap-2">
-        <Select
-          options={RESTAURANTS}
-          value={restaurant}
-          onChange={setRestaurant}
-          placeholder="Select Store"
-          className="w-full bg-background text-[14px] h-8"
-          variant="ghost"
-        />
-        <Button variant="inverse" className="w-8 h-8">
-          <BellRing className="text-foreground" />
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" className="text-red-500" onClick={handleLogout}>
+          <div className="flex items-center gap-2">
+            <span className="text-[14px] ">Logout</span>
+            <LogOut className="text-red-500 w-4 h-4" />
+          </div>
         </Button>
-        <Button variant="inverse" className="w-8 h-8">
-          <Settings className="text-foreground" />
-        </Button>
-      </div> */}
+
+      </div>
     </header>
   );
 }

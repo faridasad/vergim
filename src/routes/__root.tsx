@@ -7,6 +7,7 @@ import {
 } from '@tanstack/react-router'
 import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import { Toaster } from 'sonner'
 import appCss from '../styles.css?url'
 
 interface MyRouterContext {
@@ -18,7 +19,7 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
-      { title: 'invoys' },
+      { title: 'innalok' },
     ],
     links: [{ rel: 'stylesheet', href: appCss }],
   }),
@@ -36,6 +37,7 @@ function RootComponent() {
       <body>
         <QueryClientProvider client={queryClient}>
           <Outlet />
+          <Toaster />
 
           {process.env.NODE_ENV === 'development' && (
             <ReactQueryDevtools buttonPosition="bottom-left" />
