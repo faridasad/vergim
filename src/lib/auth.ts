@@ -1,5 +1,5 @@
 // src/lib/auth.ts
-const API_BASE_URL = 'https://innalok.faridasadli.com'
+const API_BASE_URL = 'http://taxx.runasp.net'
 const AUTH_KEY = 'invoys_auth'
 
 export type AuthData = {

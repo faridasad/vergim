@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "vite dev --port 3003",
     "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "build:prod": "vite build --mode production",
     "start": "PORT=3003 node .output/server/index.mjs",
     "preview": "vite preview --port 3003",
     "test": "vitest run"

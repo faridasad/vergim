@@ -25,10 +25,8 @@ function SplashScreen() {
 
     return (
         <div className="bg-primary min-h-screen pt-63.25 pb-24.5 flex flex-col items-center">
-
             <Logo variant="onboarding" className="animate-in fade-in zoom-in duration-500" />
-
-            <a href="https://joinposter.com/api/auth?application_id=4493&redirect_uri=https://innalok.faridasadli.com/auth-callback&response_type=code" className="mt-25 mx-auto w-[90%] max-w-125 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <a href={`https://joinposter.com/api/auth?application_id=4493&redirect_uri=${import.meta.env.VITE_REDIRECT_URI}&response_type=code`} className="mt-25 mx-auto w-[90%] max-w-125 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <Button variant="inverse" className="w-full">
                     Authorize with Poster
                 </Button>

@@ -1,7 +1,7 @@
 import { getAuthData } from '@/lib/auth'
 import type { Receipt, ReceiptProduct } from './types'
 
-const API_BASE_URL = 'https://innalok.faridasadli.com'
+const API_BASE_URL = 'http://taxx.runasp.net'
 
 export async function fetchReceipts(): Promise<Receipt[]> {
   const auth = getAuthData()
