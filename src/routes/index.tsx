@@ -12,6 +12,15 @@ function SplashScreen() {
     const navigate = Route.useNavigate()
     const [showLogin, setShowLogin] = useState(false)
 
+    // 1. Get the base Redirect URI from env
+    const redirectUri = import.meta.env.VITE_REDIRECT_URI;
+
+    // 2. Ensure it is properly encoded so parameters (like &account=...) aren't lost
+    const encodedRedirectUri = encodeURIComponent(redirectUri);
+
+    // 3. Construct the Poster Auth URL
+    const posterAuthUrl = `https://joinposter.com/api/auth?application_id=4493&redirect_uri=${encodedRedirectUri}&response_type=code`;
+
     useEffect(() => {
         const auth = getAuthData()
         if (auth) {
@@ -26,11 +35,21 @@ function SplashScreen() {
     return (
         <div className="bg-primary min-h-screen pt-63.25 pb-24.5 flex flex-col items-center">
             <Logo variant="onboarding" className="animate-in fade-in zoom-in duration-500" />
-            <a href={`https://joinposter.com/api/auth?application_id=4493&redirect_uri=${import.meta.env.VITE_REDIRECT_URI}&response_type=code`} className="mt-25 mx-auto w-[90%] max-w-125 animate-in fade-in slide-in-from-bottom-4 duration-700">
+
+            {/* Updated Link with the robustly constructed URL */}
+            <a
+                href={posterAuthUrl}
+                className="mt-25 mx-auto w-[90%] max-w-125 animate-in fade-in slide-in-from-bottom-4 duration-700"
+            >
                 <Button variant="inverse" className="w-full">
                     Authorize with Poster
                 </Button>
             </a>
+
+            {/* Optional: Helper to debug if the ENV is correct in Production */}
+            {/* <p className="text-white text-xs mt-4 opacity-50 text-center break-all px-4">
+                Debug URI: {redirectUri}
+            </p> */}
         </div>
     );
 }
