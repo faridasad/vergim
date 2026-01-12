@@ -28,7 +28,7 @@ function SplashScreen() {
 
             <Logo variant="onboarding" className="animate-in fade-in zoom-in duration-500" />
 
-            <a href="https://joinposter.com/api/auth?application_id=4493&redirect_uri=http://localhost:3000/auth-callback&response_type=code" className="mt-25 mx-auto w-[90%] max-w-125 animate-in fade-in slide-in-from-bottom-4 duration-700">
+            <a href="https://joinposter.com/api/auth?application_id=4493&redirect_uri=https://innalok.faridasadli.com/auth-callback&response_type=code" className="mt-25 mx-auto w-[90%] max-w-125 animate-in fade-in slide-in-from-bottom-4 duration-700">
                 <Button variant="inverse" className="w-full">
                     Authorize with Poster
                 </Button>
