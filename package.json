@@ -3,9 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 3000",
+    "dev": "vite dev --port 3003",
     "build": "vite build",
-    "preview": "vite preview",
+    "start": "PORT=3003 node .output/server/index.mjs",
+    "preview": "vite preview --port 3003",
     "test": "vitest run"
   },
   "dependencies": {

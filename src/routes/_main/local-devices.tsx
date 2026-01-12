@@ -2,8 +2,9 @@ import { createFileRoute } from '@tanstack/react-router'
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/shared/button'
 import { Input } from '@/components/shared/input'
-import { Loader2, Monitor, Wifi, Save, Trash2, Scan } from 'lucide-react'
+import { Loader2, Monitor, Save, Trash2, Plus, Server, CheckCircle2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
+import { OmnisoftConfig, loginToPos } from '@/integrations/omnisoft/api'
 
 export const Route = createFileRoute('/_main/local-devices')({
     component: LocalDevicesComponent,
@@ -14,27 +15,18 @@ type Device = {
     name: string
     ip: string
     type: 'printer' | 'terminal' | 'other'
-    port?: number
+    port: number
+    token?: string // We store the session token here
 }
 
 function LocalDevicesComponent() {
-    // Settings
-    const [subnet, setSubnet] = useState('192.168.1')
-    const [port, setPort] = useState('80')
-    const [scanLocalhost, setScanLocalhost] = useState(false)
-
-    // Scanning State
-    const [isScanning, setIsScanning] = useState(false)
-    const [foundDevices, setFoundDevices] = useState<Device[]>([])
-    const [hasScanned, setHasScanned] = useState(false)
-
     // Persistence
     const [savedDevices, setSavedDevices] = useState<Device[]>([])
 
     // Manual Add State
-    const [manualIp, setManualIp] = useState('')
-    const [manualPort, setManualPort] = useState('')
-    const [manualName, setManualName] = useState('')
+    const [manualIp, setManualIp] = useState('10.11.46.180') // Default to your test IP
+    const [manualPort, setManualPort] = useState('8989')     // Default to Omnisoft port
+    const [manualName, setManualName] = useState('Test POS')
     const [isAddingManual, setIsAddingManual] = useState(false)
 
     // Connection State
@@ -54,33 +46,41 @@ function LocalDevicesComponent() {
         if (active) setActiveDeviceId(active)
     }, [])
 
-    const saveDevice = (device: Device) => {
-        // Check if already saved
-        if (savedDevices.some(d => d.id === device.id)) return
+    const updateDeviceList = (newDevices: Device[]) => {
+        setSavedDevices(newDevices)
+        localStorage.setItem('invoys_saved_devices', JSON.stringify(newDevices))
+    }
 
-        const newSaved = [...savedDevices, device]
-        setSavedDevices(newSaved)
-        localStorage.setItem('invoys_saved_devices', JSON.stringify(newSaved))
+    const saveDevice = (device: Device) => {
+        if (savedDevices.some(d => d.id === device.id)) return
+        updateDeviceList([...savedDevices, device])
         toast.success(`Device ${device.name} saved`)
     }
 
     const removeDevice = (id: string) => {
         const newSaved = savedDevices.filter(d => d.id !== id)
-        setSavedDevices(newSaved)
-        localStorage.setItem('invoys_saved_devices', JSON.stringify(newSaved))
+        updateDeviceList(newSaved)
+
+        if (activeDeviceId === id) {
+            setActiveDeviceId(null)
+            localStorage.removeItem('invoys_active_device_id')
+        }
         toast.info("Device removed")
     }
 
     const handleManualAdd = () => {
         if (!manualIp) return
-        const id = `${manualIp}:${manualPort || '80'}`
+        const portVal = manualPort ? parseInt(manualPort) : 8989
+        const id = `${manualIp}:${portVal}`
+
         const newDevice: Device = {
             id,
             name: manualName || `Device ${manualIp}`,
             ip: manualIp,
-            port: manualPort ? parseInt(manualPort) : undefined,
-            type: 'other'
+            port: portVal,
+            type: 'terminal'
         }
+
         saveDevice(newDevice)
         setIsAddingManual(false)
         setManualIp('')
@@ -88,125 +88,132 @@ function LocalDevicesComponent() {
         setManualName('')
     }
 
+    // --- INTEGRATION LOGIC STARTS HERE ---
     const handleConnect = async (device: Device) => {
         setConnectingId(device.id)
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 3000)
-
-        const promise = fetch(`http://${device.ip}:${device.port || 80}/`, {
-            mode: 'no-cors',
-            signal: controller.signal,
-            // @ts-ignore
-            targetAddressSpace: 'local'
-        }).then(() => {
-            // Successful reachability (even if opaque/401)
-            setActiveDeviceId(device.id)
-            localStorage.setItem('invoys_active_device_id', device.id)
-            // Save if not already saved
-            if (!savedDevices.some(d => d.id === device.id)) {
-                saveDevice(device)
-            }
-            return device.name
-        })
-
-        toast.promise(promise, {
-            loading: `Connecting to ${device.name}...`,
-            success: (name) => `${name} is active and connected`,
-            error: (err) => {
-                console.error(err)
-                return `Could not reach ${device.name}`
-            }
-        })
 
         try {
-            await promise
-        } catch (e) {
-            // Error handled by toast
+            // 1. Prepare Configuration
+            const config: OmnisoftConfig = {
+                ip: device.ip,
+                port: device.port,
+                // These are defaults from your prompt, could be inputs later
+                username: "SuperApi", 
+                password: "123"
+            }
+
+            // 2. Attempt Login via our Helper
+            // This replaces the generic fetch. We expect an Access Token back.
+            const token = await loginToPos(config)
+            
+            console.log("Omnisoft Token Acquired:", token)
+
+            // 3. Update Device with Token
+            const updatedDevices = savedDevices.map(d => 
+                d.id === device.id ? { ...d, token: token } : d
+            )
+            updateDeviceList(updatedDevices)
+
+            // 4. Set Active
+            setActiveDeviceId(device.id)
+            localStorage.setItem('invoys_active_device_id', device.id)
+            
+            toast.success(`Connected to ${device.name}`, {
+                description: "Session token acquired successfully."
+            })
+
+        } catch (error: any) {
+            console.error("Connection Failed", error)
+            
+            let errorMsg = "Could not reach device"
+            
+            // Handle CORS specifically in error message
+            if (error.name === 'TypeError' && error.message === 'Failed to fetch') {
+                errorMsg = "Network/CORS Error. Check VPN or Proxy."
+            } else if (error.message) {
+                errorMsg = error.message
+            }
+
+            toast.error(`Connection Failed: ${device.name}`, {
+                description: errorMsg
+            })
         } finally {
-            clearTimeout(timeoutId)
             setConnectingId(null)
         }
-    }
-
-
-    const handleScan = async () => {
-        setIsScanning(true)
-        setFoundDevices([])
-        setHasScanned(false)
-
-        const targetPort = parseInt(port) || 80
-        const currentSubnet = subnet.trim()
-
-        const checkIp = async (ip: string) => {
-            const controller = new AbortController()
-            const timeoutId = setTimeout(() => controller.abort(), 1500) // 1.5s timeout
-
-            try {
-                await fetch(`http://${ip}:${targetPort}`, {
-                    method: 'HEAD',
-                    mode: 'no-cors',
-                    signal: controller.signal,
-                    // @ts-ignore
-                    targetAddressSpace: 'local'
-                })
-                // Reachable
-                const newDevice: Device = {
-                    id: `${ip}:${targetPort}`,
-                    name: `Device ${ip}`,
-                    ip: ip,
-                    port: targetPort,
-                    type: 'other'
-                }
-                setFoundDevices(prev => {
-                    if (prev.some(d => d.id === newDevice.id)) return prev
-                    return [...prev, newDevice]
-                })
-            } catch (err) {
-                // Ignore
-            } finally {
-                clearTimeout(timeoutId)
-            }
-        }
-
-        const ipsToCheck: string[] = []
-
-        // Add Localhost if requested or relevant
-        if (scanLocalhost || currentSubnet === '127.0.0') {
-            ipsToCheck.push('127.0.0.1')
-            ipsToCheck.push('localhost')
-        }
-
-        // Subnet generation
-        if (currentSubnet && currentSubnet !== '127.0.0') {
-            for (let i = 1; i < 255; i++) {
-                ipsToCheck.push(`${currentSubnet}.${i}`)
-            }
-        }
-
-        // Batch processing
-        const batchSize = 10
-        for (let i = 0; i < ipsToCheck.length; i += batchSize) {
-            const batch = ipsToCheck.slice(i, i + batchSize).map(ip => checkIp(ip))
-            await Promise.all(batch)
-        }
-
-        setIsScanning(false)
-        setHasScanned(true)
     }
 
     return (
         <div className="p-4 space-y-6 max-w-4xl mx-auto">
             <div className="flex flex-col space-y-2">
-                <h1 className="text-2xl font-bold">Local Devices</h1>
-                <p className="text-gray-500">Manage and discover devices on your network.</p>
+                <h1 className="text-2xl font-bold">POS Terminals</h1>
+                <p className="text-gray-500">Manage connections to Omnisoft terminals.</p>
+                
+                {/* Helper info for testing */}
+                <div className="bg-blue-50 text-blue-800 text-xs p-3 rounded-md border border-blue-200">
+                    <p className="font-bold">Testing Requirements:</p>
+                    <ul className="list-disc pl-4 mt-1">
+                        <li>Connect FortiClient VPN to <span className="font-mono">publicip1.omnitech.info.az</span></li>
+                        <li>Target IP: <span className="font-mono">10.11.46.180</span> Port: <span className="font-mono">8989</span></li>
+                        <li>Note: If you get "Failed to fetch", it is likely a CORS issue.</li>
+                    </ul>
+                </div>
             </div>
 
             {/* Saved Devices Section */}
-            {savedDevices.length > 0 && (
-                <div className="space-y-4">
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
                     <h2 className="font-semibold text-lg flex items-center gap-2">
                         <Save className="w-5 h-5" /> Saved Devices
                     </h2>
+                    <Button
+                        variant={isAddingManual ? "secondary" : "default"}
+                        onClick={() => setIsAddingManual(!isAddingManual)}
+                        className="gap-2"
+                    >
+                        <Plus className="w-4 h-4" />
+                        {isAddingManual ? 'Cancel' : 'Add Device'}
+                    </Button>
+                </div>
+
+                {/* Add Manual Form */}
+                {isAddingManual && (
+                    <div className="p-6 bg-white rounded-xl border border-gray-200 shadow-sm space-y-4 animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Server className="w-5 h-5 text-gray-500" />
+                            <h3 className="font-medium">Add New Terminal</h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase text-gray-500">Name</label>
+                                <Input placeholder="Test POS" value={manualName} onChange={e => setManualName(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase text-gray-500">IP Address</label>
+                                <Input placeholder="10.11.46.180" value={manualIp} onChange={e => setManualIp(e.target.value)} />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase text-gray-500">Port</label>
+                                <Input placeholder="8989" value={manualPort} onChange={e => setManualPort(e.target.value)} />
+                            </div>
+                        </div>
+                        <div className="flex justify-end pt-2">
+                            <Button onClick={handleManualAdd} disabled={!manualIp}>
+                                Save Device
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* List */}
+                {savedDevices.length === 0 && !isAddingManual ? (
+                    <div className="p-12 text-center border-2 border-dashed border-gray-200 rounded-xl bg-gray-50">
+                        <Monitor className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                        <h3 className="text-gray-900 font-medium">No terminals saved</h3>
+                        <Button variant="outline" className="mt-4" onClick={() => setIsAddingManual(true)}>
+                            Add Terminal
+                        </Button>
+                    </div>
+                ) : (
                     <div className="grid gap-3">
                         {savedDevices.map((device) => {
                             const isConnected = activeDeviceId === device.id
@@ -219,140 +226,27 @@ function LocalDevicesComponent() {
                                         <div>
                                             <p className="font-medium text-gray-900 flex items-center gap-2">
                                                 {device.name}
-                                                {isConnected && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Connected</span>}
+                                                {isConnected && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">Online</span>}
                                             </p>
-                                            <p className="text-xs text-gray-500 font-mono">{device.ip}{device.port ? `:${device.port}` : ''}</p>
+                                            <p className="text-xs text-gray-500 font-mono flex gap-2">
+                                                {device.ip}:{device.port}
+                                                {device.token ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> Token Saved</span> : <span className="text-orange-400 flex items-center gap-1"><AlertCircle className="w-3 h-3"/> No Token</span>}
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {isConnected ? (
-                                            <Button variant="outline" size="sm" className="border-green-200 text-green-700 bg-green-50 hover:bg-green-100 hover:text-green-800" disabled>
-                                                Active
-                                            </Button>
-                                        ) : (
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={() => handleConnect(device)}
-                                                disabled={connectingId === device.id}
-                                            >
-                                                {connectingId === device.id ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Connect'}
-                                            </Button>
-                                        )}
+                                        <Button
+                                            variant={isConnected ? "outline" : "default"}
+                                            size="sm"
+                                            onClick={() => handleConnect(device)}
+                                            disabled={connectingId === device.id}
+                                            className={isConnected ? "border-green-200 text-green-700 hover:bg-green-50" : ""}
+                                        >
+                                            {connectingId === device.id ? <Loader2 className="w-4 h-4 animate-spin" /> : (isConnected ? 'Reconnect' : 'Connect')}
+                                        </Button>
 
                                         <Button variant="ghost" size="icon" onClick={() => removeDevice(device.id)} className="text-red-500 hover:text-red-600 hover:bg-red-50">
                                             <Trash2 className="w-4 h-4" />
-                                        </Button>
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </div>
-                </div>
-            )}
-
-            {/* Add Manually Toggle */}
-            <div className="flex justify-end">
-                <Button variant="ghost" onClick={() => setIsAddingManual(!isAddingManual)} className="text-sm">
-                    {isAddingManual ? 'Cancel Manual Add' : '+ Add Manually'}
-                </Button>
-            </div>
-
-            {isAddingManual && (
-                <div className="p-4 bg-gray-50 rounded-xl border border-dashed border-gray-300 space-y-4 animate-in fade-in slide-in-from-top-2">
-                    <h3 className="font-medium">Add Device Manually</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase text-gray-500">Name (Optional)</label>
-                            <Input placeholder="Receipt Printer" value={manualName} onChange={e => setManualName(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase text-gray-500">IP Address</label>
-                            <Input placeholder="192.168.1.100" value={manualIp} onChange={e => setManualIp(e.target.value)} />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-semibold uppercase text-gray-500">Port</label>
-                            <Input placeholder="80" value={manualPort} onChange={e => setManualPort(e.target.value)} />
-                        </div>
-                    </div>
-                    <Button onClick={handleManualAdd} disabled={!manualIp}>Save Device</Button>
-                </div>
-            )}
-
-
-            {/* Scan Controls */}
-            <div className="p-6 bg-white border border-gray-200 rounded-xl shadow-sm space-y-6">
-                <div className="flex items-center justify-between">
-                    <h2 className="font-semibold text-lg flex items-center gap-2">
-                        <Scan className="w-5 h-5" /> Network Scan
-                    </h2>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase text-gray-500">Subnet</label>
-                        <Input
-                            value={subnet}
-                            onChange={(e) => setSubnet(e.target.value)}
-                            placeholder="192.168.1"
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase text-gray-500">Port(s)</label>
-                        <Input
-                            value={port}
-                            onChange={(e) => setPort(e.target.value)}
-                            placeholder="80, 443, 8080..."
-                        />
-                    </div>
-                    <Button onClick={handleScan} disabled={isScanning} className="w-full gap-2">
-                        {isScanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
-                        {isScanning ? 'Scanning...' : 'Start Scan'}
-                    </Button>
-                </div>
-
-                {/* Scan Results */}
-                {isScanning && (
-                    <div className="text-center py-8">
-                        <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary mb-2" />
-                        <p className="text-sm text-gray-500">Scanning {subnet}.x for active devices...</p>
-                    </div>
-                )}
-
-                {!isScanning && hasScanned && foundDevices.length === 0 && (
-                    <div className="text-center py-8 text-gray-500">
-                        No active devices found in this range.
-                    </div>
-                )}
-
-                {foundDevices.length > 0 && (
-                    <div className="space-y-3 pt-4 border-t border-gray-100">
-                        <h3 className="text-sm font-medium text-gray-600">Found Devices ({foundDevices.length})</h3>
-                        {foundDevices.map((device) => {
-                            const isConnected = activeDeviceId === device.id
-                            return (
-                                <div key={device.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-green-100 text-green-600 rounded-full flex items-center justify-center">
-                                            <Wifi className="w-4 h-4" />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">{device.ip}</p>
-                                            <p className="text-xs text-gray-500">Port: {device.port}</p>
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2">
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => handleConnect(device)}
-                                            disabled={connectingId === device.id || isConnected}
-                                            className={isConnected ? "border-green-500 text-green-600 bg-green-50" : ""}
-                                        >
-                                            {connectingId === device.id ? <Loader2 className="w-3 h-3 animate-spin" /> : isConnected ? 'Connected' : 'Connect'}
-                                        </Button>
-                                        <Button size="sm" variant="ghost" onClick={() => saveDevice(device)} disabled={savedDevices.some(d => d.id === device.id)}>
-                                            {savedDevices.some(d => d.id === device.id) ? 'Saved' : 'Save'}
                                         </Button>
                                     </div>
                                 </div>

@@ -10,6 +10,8 @@ export async function fetchReceipts(): Promise<Receipt[]> {
   const url = new URL(`${API_BASE_URL}/api/UI/GetAllReceipts`)
   url.searchParams.set('token', auth.access_token)
   url.searchParams.set('accountNumber', auth.account_number)
+  url.searchParams.set('page', '1')
+  url.searchParams.set('pageSize', '10')
 
   const res = await fetch(url.toString(), {
     method: 'GET',
@@ -17,9 +19,22 @@ export async function fetchReceipts(): Promise<Receipt[]> {
   })
 
   if (!res.ok) throw new Error('Failed to fetch receipts')
-  
+
   const text = await res.text()
-  return text ? JSON.parse(text) : []
+  if (!text) return []
+
+  try {
+    const data = JSON.parse(text)
+    // Handle paginated response structure
+    if (data.receipts && Array.isArray(data.receipts)) {
+      return data.receipts
+    }
+    // Fallback for array response
+    return Array.isArray(data) ? data : []
+  } catch (e) {
+    console.error('Error parsing receipts:', e)
+    return []
+  }
 }
 
 export async function fetchReceiptProducts(receiptId: number): Promise<ReceiptProduct[]> {
