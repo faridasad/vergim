@@ -3,17 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite dev --port 4321",
+    "dev": "vite dev --port 3000",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
-    "start": "PORT=4321 node .output/server/index.mjs",
-    "preview": "vite preview --port 4321",
+    "start": "PORT=3000 node .output/server/index.mjs",
+    "preview": "vite preview --port 3000",
     "test": "vitest run"
   },
   "dependencies": {
     "@faker-js/faker": "^10.0.0",
     "@hookform/resolvers": "^5.2.2",
+    "@microsoft/signalr": "^10.0.0",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-popover": "^1.1.15",
     "@radix-ui/react-select": "^2.2.6",

@@ -1,5 +1,6 @@
+import { API_BASE_URL } from "./constants"
+
 // src/lib/auth.ts
-const API_BASE_URL = 'https://innalok.faridasadli.com'
 const AUTH_KEY = 'invoys_auth'
 
 export type AuthData = {
