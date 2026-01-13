@@ -15,7 +15,7 @@ export function ReceiptsPage() {
   // SignalR Connection
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/WebhookHub`)
+      .withUrl(`${API_BASE_URL}/api/WebhookHub`)
       .withAutomaticReconnect()
       .build()
 
