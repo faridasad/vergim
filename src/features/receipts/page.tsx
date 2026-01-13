@@ -4,7 +4,7 @@ import { HubConnectionBuilder } from '@microsoft/signalr'
 import { fetchReceipts, fetchReceiptProducts } from './api'
 import { ReceiptsTable } from './table'
 import { ProductsPanel } from './products-panel'
-import { API_BASE_URL } from '@/lib/constants'
+import { API_BASE_URL, SIGNALR_BASE_URL } from '@/lib/constants'
 import type { Receipt } from './types'
 
 export function ReceiptsPage() {
@@ -15,7 +15,7 @@ export function ReceiptsPage() {
   // SignalR Connection
   useEffect(() => {
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/WebhookHub`)
+      .withUrl(SIGNALR_BASE_URL)
       .withAutomaticReconnect()
       .build()
 
