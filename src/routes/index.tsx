@@ -12,14 +12,11 @@ function SplashScreen() {
     const navigate = Route.useNavigate()
     const [showLogin, setShowLogin] = useState(false)
 
-    // 1. Get the base Redirect URI from env
     const redirectUri = import.meta.env.VITE_REDIRECT_URI;
 
-    // 2. Ensure it is properly encoded so parameters (like &account=...) aren't lost
     const encodedRedirectUri = encodeURIComponent(redirectUri);
 
-    // 3. Construct the Poster Auth URL
-    const posterAuthUrl = `https://joinposter.com/api/auth?application_id=4493&redirect_uri=${encodedRedirectUri}&response_type=code`;
+    const posterAuthUrl = `https://joinposter.com/api/auth?application_id=4573&redirect_uri=${encodedRedirectUri}&response_type=code`;
 
     useEffect(() => {
         const auth = getAuthData()
