@@ -17,7 +17,7 @@ export const Route = createFileRoute('/auth-callback')({
 function AuthCallbackComponent() {
   const { code, account } = Route.useSearch()
   console.log(code);
-  
+
   const navigate = Route.useNavigate()
   const { queryClient } = Route.useRouteContext()
 
@@ -31,7 +31,7 @@ function AuthCallbackComponent() {
   })
 
   useEffect(() => {
-    // if (!mutation.isPending && !mutation.isSuccess) mutation.mutate()
+    if (!mutation.isPending && !mutation.isSuccess) mutation.mutate()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
