@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { HubConnectionBuilder } from '@microsoft/signalr'
+import { HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr'
 import { fetchReceipts, fetchReceiptProducts } from './api'
 import { ReceiptsTable } from './table'
 import { ProductsPanel } from './products-panel'
@@ -14,14 +14,28 @@ export function ReceiptsPage() {
 
   // SignalR Connection
   useEffect(() => {
+    let isActive = true
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/api/WebhookHub`)
+      .withUrl(`${API_BASE_URL}/api/WebhookHub`, {
+        transport: HttpTransportType.WebSockets
+      })
       .withAutomaticReconnect()
       .build()
 
-    connection.start()
-      .then(() => console.log('SignalR Connected'))
-      .catch(err => console.error('SignalR Connection Error: ', err))
+    const startConnection = async () => {
+      try {
+        await connection.start()
+        if (isActive) {
+          console.log('SignalR Connected')
+        } else {
+          await connection.stop()
+        }
+      } catch (err) {
+        console.error('SignalR Connection Error: ', err)
+      }
+    }
+
+    startConnection()
 
     connection.on("posterEvent", () => {
       console.log("New receipt notification received")
@@ -29,6 +43,7 @@ export function ReceiptsPage() {
     })
 
     return () => {
+      isActive = false
       connection.stop().then(() => console.log('SignalR Disconnected'))
     }
   }, [queryClient])
