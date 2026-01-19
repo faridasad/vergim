@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr'
 import { fetchReceipts, fetchReceiptProducts } from './api'
 import { ReceiptsTable } from './table'
 import { ProductsPanel } from './products-panel'
 import { API_BASE_URL } from '@/lib/constants'
 import type { Receipt } from './types'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 
 export function ReceiptsPage() {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [pageSize] = useState(10)
   const queryClient = useQueryClient()
 
   // SignalR Connection
@@ -50,15 +53,13 @@ export function ReceiptsPage() {
 
   // 1. Query Receipts
   const {
-    data: receipts = [],
+    data,
     isLoading: isLoadingReceipts,
     error: receiptsError
   } = useQuery({
-    queryKey: ['receipts'],
-    queryFn: fetchReceipts,
-    select: (data) => data.sort((a, b) =>
-      new Date(b.createDate).getTime() - new Date(a.createDate).getTime()
-    )
+    queryKey: ['receipts', page, pageSize],
+    queryFn: () => fetchReceipts(page, pageSize),
+    placeholderData: keepPreviousData
   })
 
   // 2. Query Products
@@ -71,6 +72,10 @@ export function ReceiptsPage() {
     enabled: !!selectedReceipt && isPanelOpen,
   })
 
+  const receipts = data?.receipts ?? []
+  const totalCount = data?.totalCount ?? 0
+  const totalPages = Math.ceil(totalCount / pageSize)
+
   const handleViewReceipt = (receipt: Receipt) => {
     setSelectedReceipt(receipt)
     setIsPanelOpen(true)
@@ -82,12 +87,20 @@ export function ReceiptsPage() {
     setTimeout(() => setSelectedReceipt(null), 300)
   }
 
+  const handlePreviousPage = () => {
+    setPage((prev) => Math.max(prev - 1, 1))
+  }
+
+  const handleNextPage = () => {
+    setPage((prev) => (prev < totalPages ? prev + 1 : prev))
+  }
+
   return (
     <div className="min-h-screen bg-background pb-10">
       <div className="max-w-7xl mx-auto">
 
         {/* Mobile Header */}
-        <div className="px-4 py-4 border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center">
+        <div className="px-4 py-4 border-b border-gray-200 sticky top-0 z-10 flex justify-between items-center bg-white/80 backdrop-blur-md">
           <h1 className="text-xl font-bold text-gray-900">Qəbzlər</h1>
           <button
             onClick={() => window.location.reload()}
@@ -98,9 +111,9 @@ export function ReceiptsPage() {
         </div>
 
         {/* Content */}
-        <div className="p-4">
+        <div className="p-4 space-y-4">
           {receiptsError && (
-            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+            <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               Xəta baş verdi: {receiptsError instanceof Error ? receiptsError.message : 'Məlumat yüklənmədi'}
             </div>
           )}
@@ -110,6 +123,61 @@ export function ReceiptsPage() {
             isLoading={isLoadingReceipts}
             onView={handleViewReceipt}
           />
+
+          {/* Pagination Controls */}
+          {totalCount > 0 && (
+            <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg shadow-sm">
+              <div className="flex flex-1 justify-between sm:hidden">
+                <button
+                  onClick={handlePreviousPage}
+                  disabled={page === 1}
+                  className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Geri
+                </button>
+                <button
+                  onClick={handleNextPage}
+                  disabled={page >= totalPages}
+                  className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  İrəli
+                </button>
+              </div>
+              <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-gray-700">
+                    <span className="font-medium">{totalCount}</span> nəticədən{' '}
+                    <span className="font-medium">{Math.min((page - 1) * pageSize + 1, totalCount)}</span>
+                    {' - '}
+                    <span className="font-medium">{Math.min(page * pageSize, totalCount)}</span> arası göstərilir
+                  </p>
+                </div>
+                <div>
+                  <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                    <button
+                      onClick={handlePreviousPage}
+                      disabled={page === 1}
+                      className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Previous</span>
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300 focus:outline-offset-0">
+                      Səhifə {page} / {totalPages || 1}
+                    </span>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={page >= totalPages}
+                      className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <span className="sr-only">Next</span>
+                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </nav>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Drawer */}

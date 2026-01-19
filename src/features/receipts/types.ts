@@ -1,4 +1,11 @@
 // src/features/receipts/types.ts
+export type ReceiptsResponse = {
+  receipts: Receipt[]
+  page: number
+  pageSize: number
+  totalCount: number
+}
+
 export type Receipt = {
   id: number
   createDate: string
