@@ -24,7 +24,7 @@ export function ReceiptsPage() {
 
     const connection = new HubConnectionBuilder()
       // User requested: wss://.../api/WebhookHub?id={poster token}
-      .withUrl(`${API_BASE_URL}/api/WebhookHub?id=${encodeURIComponent(token)}`, {
+      .withUrl(`${API_BASE_URL}/api/WebhookHub?token=${encodeURIComponent(token)}`, {
         skipNegotiation: true,
         transport: HttpTransportType.WebSockets
       })
