@@ -38,8 +38,8 @@ export function ReceiptsTable({ receipts, isLoading, onView }: ReceiptsTableProp
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {receipts.map((receipt) => (
-              <tr key={receipt.id} className="hover:bg-gray-50 transition-colors">
+            {receipts.map((receipt, index) => (
+              <tr key={`${receipt.id}-${index}`} className="hover:bg-gray-50 transition-colors">
                 <td className="px-4 py-3 font-mono text-gray-600 text-xs">
                   {receipt.transaction_id || '-'}
                 </td>

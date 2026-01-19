@@ -4,6 +4,7 @@ import { HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr'
 import { fetchReceipts, fetchReceiptProducts } from './api'
 import { ReceiptsTable } from './table'
 import { ProductsPanel } from './products-panel'
+import { getAuthData } from '@/lib/auth'
 import { API_BASE_URL } from '@/lib/constants'
 import type { Receipt } from './types'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
@@ -18,8 +19,13 @@ export function ReceiptsPage() {
   // SignalR Connection
   useEffect(() => {
     let isActive = true
+    const auth = getAuthData()
+    const token = auth?.access_token || ''
+
     const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/api/WebhookHub`, {
+      // User requested: wss://.../api/WebhookHub?id={poster token}
+      .withUrl(`${API_BASE_URL}/api/WebhookHub?id=${encodeURIComponent(token)}`, {
+        skipNegotiation: true,
         transport: HttpTransportType.WebSockets
       })
       .withAutomaticReconnect()
@@ -40,8 +46,8 @@ export function ReceiptsPage() {
 
     startConnection()
 
-    connection.on("posterEvent", () => {
-      console.log("New receipt notification received")
+    connection.on("posterEvent", (message) => {
+      console.log("New receipt notification received:", message)
       queryClient.invalidateQueries({ queryKey: ['receipts'] })
     })
 
