@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import { HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr'
 import { fetchReceipts, fetchReceiptProducts } from './api'
+import { sendToPos } from '@/integrations/omnisoft/api'
+import { SignalRNotification } from '@/integrations/omnisoft/types'
 import { ReceiptsTable } from './table'
 import { ProductsPanel } from './products-panel'
 import { getAuthData } from '@/lib/auth'
@@ -45,8 +47,14 @@ export function ReceiptsPage() {
 
     startConnection()
 
-    connection.on("posterEvent", (message) => {
-      console.log("New receipt notification received:", message)
+    connection.on("posterEvent", (data: SignalRNotification) => {
+      console.log("New receipt notification received:", data)
+      
+      // Forward to Local POS
+      if (data && data.allData) {
+          sendToPos(data.allData)
+      }
+
       queryClient.invalidateQueries({ queryKey: ['receipts'] })
     })
 

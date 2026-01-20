@@ -84,3 +84,72 @@ export const getPosInfo = async (config: OmnisoftConfig, token: string) => {
     
     return await response.json();
 };
+
+/**
+ * 3. SEND TO POS (Generic Forwarder)
+ * Reads active device from localStorage, injects token, and sends to POS.
+ */
+export const sendToPos = async (requestData: any) => {
+    try {
+        // 1. Get Active Device config from LocalStorage
+        const activeId = localStorage.getItem('invoys_active_device_id');
+        const savedDevicesStr = localStorage.getItem('invoys_saved_devices');
+        
+        if (!activeId || !savedDevicesStr) {
+            console.warn("No active POS device configured.");
+            return; 
+        }
+
+        const devices: any[] = JSON.parse(savedDevicesStr);
+        const activeDevice = devices.find(d => d.id === activeId);
+
+        if (!activeDevice) {
+            console.warn("Active device not found in saved devices.");
+            return;
+        }
+
+        if (!activeDevice.token) {
+            console.warn("Active device has no session token. Please login via Local Devices page.");
+            // Optional: Could trigger a toast here if we were in a component
+            return;
+        }
+
+        // 2. Prepare Config
+        const config: OmnisoftConfig = {
+            ip: activeDevice.ip,
+            port: activeDevice.port
+        };
+
+        // 3. Inject Token
+        // The payload from SignalR (requestData) has access_token: null
+        // We override it with the active local token.
+        const payload = { ...requestData };
+        if (payload.requestData) {
+            payload.requestData.access_token = activeDevice.token;
+        }
+
+        console.log("Forwarding to Omnisoft POS:", payload);
+
+        // 4. Send
+        const response = await fetch(getUrl(config), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            throw new Error(`POS HTTP Error: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("POS Response:", data);
+        return data;
+
+    } catch (error) {
+        console.error("Failed to forward to Omnisoft POS:", error);
+        // We generally don't want to crash the main app flow if POS is offline, 
+        // so we just log it. 
+    }
+};
