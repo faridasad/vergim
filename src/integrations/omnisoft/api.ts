@@ -89,8 +89,10 @@ export const getPosInfo = async (config: OmnisoftConfig, token: string) => {
 /**
  * 3. SEND TO POS (Generic Forwarder)
  * Reads active device from localStorage, injects token, and sends to POS.
+ * @param requestData The Omnisoft payload
+ * @param posterToken The token from the Poster/Backend (used for callbacks)
  */
-export const sendToPos = async (requestData: any) => {
+export const sendToPos = async (requestData: any, posterToken?: string) => {
     try {
         // 1. Get Active Device config from LocalStorage
         const activeId = localStorage.getItem('invoys_active_device_id');
@@ -178,24 +180,27 @@ export const sendToPos = async (requestData: any) => {
             // Only proceed if operation was successful (code === 0) and we have a token
             if (data.code === 0 && activeDevice.token && (docType === 'sale' || docType === 'rollback')) {
 
-                const receiptId = data.document_number; // mapped from document_number
+                const receiptId = payload.requestData?.int_ref || data.document_number; // Prioritize int_ref from request
                 const fiscalId = data.long_id;         // mapped from long_id
 
                 if (docType === 'sale') {
                     // SaleResponse: Token, ReceiptId, FiscalId
                     if (receiptId && fiscalId) {
                         const queryParams = new URLSearchParams({
-                            Token: activeDevice.token,
+                            Token: posterToken || activeDevice.token,
                             ReceiptId: String(receiptId),
                             FiscalId: fiscalId
                         });
                         const url = `${API_BASE_URL}/api/Tax/SaleResponse?${queryParams.toString()}`;
                         console.log(`[Callback] Sending SaleResponse to ${url}`);
 
-                        // Fire and forget - don't await/block
-                        fetch(url, { method: 'POST' })
-                            .then(r => r.ok ? console.log("[Callback] SaleResponse Success") : console.warn(`[Callback] SaleResponse Failed: ${r.status}`))
-                            .catch(e => console.warn("[Callback] SaleResponse Error:", e));
+                        // Await callback to ensure revalidation happens after success
+                        try {
+                            const r = await fetch(url, { method: 'POST' });
+                            r.ok ? console.log("[Callback] SaleResponse Success") : console.warn(`[Callback] SaleResponse Failed: ${r.status}`);
+                        } catch (e) {
+                            console.warn("[Callback] SaleResponse Error:", e);
+                        }
                     } else {
                         console.warn("[Callback] Missing ReceiptId or FiscalId in Sale response", data);
                     }
@@ -204,16 +209,19 @@ export const sendToPos = async (requestData: any) => {
                     // RollBackResponse: Token, ReceiptId
                     if (receiptId) {
                         const queryParams = new URLSearchParams({
-                            Token: activeDevice.token,
+                            Token: posterToken || activeDevice.token,
                             ReceiptId: String(receiptId)
                         });
                         const url = `${API_BASE_URL}/api/Tax/RollBackResponse?${queryParams.toString()}`;
                         console.log(`[Callback] Sending RollBackResponse to ${url}`);
 
-                        // Fire and forget
-                        fetch(url, { method: 'POST' })
-                            .then(r => r.ok ? console.log("[Callback] RollBackResponse Success") : console.warn(`[Callback] RollBackResponse Failed: ${r.status}`))
-                            .catch(e => console.warn("[Callback] RollBackResponse Error:", e));
+                        // Await callback
+                        try {
+                            const r = await fetch(url, { method: 'POST' });
+                            r.ok ? console.log("[Callback] RollBackResponse Success") : console.warn(`[Callback] RollBackResponse Failed: ${r.status}`);
+                        } catch (e) {
+                            console.warn("[Callback] RollBackResponse Error:", e);
+                        }
                     } else {
                         console.warn("[Callback] Missing ReceiptId in Rollback response", data);
                     }

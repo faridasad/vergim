@@ -47,12 +47,12 @@ export function ReceiptsPage() {
 
     startConnection()
 
-    connection.on("posterEvent", (data: SignalRNotification) => {
+    connection.on("posterEvent", async (data: SignalRNotification) => {
       console.log("New receipt notification received:", data)
       
       // Forward to Local POS
       if (data && data.allData) {
-          sendToPos(data.allData)
+          await sendToPos(data.allData, token)
       }
 
       queryClient.invalidateQueries({ queryKey: ['receipts'] })
