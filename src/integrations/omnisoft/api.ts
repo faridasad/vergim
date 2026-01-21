@@ -1,4 +1,5 @@
 // src/lib/omnisoft-api.ts
+import { API_BASE_URL } from '../../lib/constants';
 
 // The base URL structure for Omnisoft
 const API_VERSION = 'v2';
@@ -81,7 +82,7 @@ export const getPosInfo = async (config: OmnisoftConfig, token: string) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
     });
-    
+
     return await response.json();
 };
 
@@ -94,10 +95,10 @@ export const sendToPos = async (requestData: any) => {
         // 1. Get Active Device config from LocalStorage
         const activeId = localStorage.getItem('invoys_active_device_id');
         const savedDevicesStr = localStorage.getItem('invoys_saved_devices');
-        
+
         if (!activeId || !savedDevicesStr) {
             console.warn("No active POS device configured.");
-            return; 
+            return;
         }
 
         const devices: any[] = JSON.parse(savedDevicesStr);
@@ -128,6 +129,30 @@ export const sendToPos = async (requestData: any) => {
             payload.requestData.access_token = activeDevice.token;
         }
 
+        // Sanitization Logic for Quantity
+        try {
+            const params = payload.requestData?.tokenData?.parameters;
+            if (params?.doc_type === 'sale' && params?.data?.items) {
+                const items = params.data.items;
+                if (Array.isArray(items)) {
+                    items.forEach((item: any) => {
+                        // If we have a valid sum and price, but quantity looks wrong
+                        if (item.itemSum > 0 && item.itemPrice > 0) {
+                            const calculatedQty = item.itemSum / item.itemPrice;
+
+                            // If quantity is practically zero (like 4e-7) or significantly mismatched
+                            if (item.itemQuantity < 0.0001 || Math.abs(item.itemQuantity - calculatedQty) > 0.01) {
+                                console.warn(`[Auto-Fix] Correcting quantity for ${item.itemName}: ${item.itemQuantity} -> ${calculatedQty}`);
+                                item.itemQuantity = calculatedQty;
+                            }
+                        }
+                    });
+                }
+            }
+        } catch (e) {
+            console.warn("Error sanitizing payload:", e);
+        }
+
         console.log("Forwarding to Omnisoft POS:", payload);
 
         // 4. Send
@@ -145,6 +170,60 @@ export const sendToPos = async (requestData: any) => {
 
         const data = await response.json();
         console.log("POS Response:", data);
+
+        // --- Callback Logic for Sale/Rollback ---
+        try {
+            const docType = payload.requestData?.tokenData?.parameters?.doc_type;
+
+            // Only proceed if operation was successful (code === 0) and we have a token
+            if (data.code === 0 && activeDevice.token && (docType === 'sale' || docType === 'rollback')) {
+
+                const receiptId = data.document_number; // mapped from document_number
+                const fiscalId = data.long_id;         // mapped from long_id
+
+                if (docType === 'sale') {
+                    // SaleResponse: Token, ReceiptId, FiscalId
+                    if (receiptId && fiscalId) {
+                        const queryParams = new URLSearchParams({
+                            Token: activeDevice.token,
+                            ReceiptId: String(receiptId),
+                            FiscalId: fiscalId
+                        });
+                        const url = `${API_BASE_URL}/api/Tax/SaleResponse?${queryParams.toString()}`;
+                        console.log(`[Callback] Sending SaleResponse to ${url}`);
+
+                        // Fire and forget - don't await/block
+                        fetch(url, { method: 'POST' })
+                            .then(r => r.ok ? console.log("[Callback] SaleResponse Success") : console.warn(`[Callback] SaleResponse Failed: ${r.status}`))
+                            .catch(e => console.warn("[Callback] SaleResponse Error:", e));
+                    } else {
+                        console.warn("[Callback] Missing ReceiptId or FiscalId in Sale response", data);
+                    }
+
+                } else if (docType === 'rollback') {
+                    // RollBackResponse: Token, ReceiptId
+                    if (receiptId) {
+                        const queryParams = new URLSearchParams({
+                            Token: activeDevice.token,
+                            ReceiptId: String(receiptId)
+                        });
+                        const url = `${API_BASE_URL}/api/Tax/RollBackResponse?${queryParams.toString()}`;
+                        console.log(`[Callback] Sending RollBackResponse to ${url}`);
+
+                        // Fire and forget
+                        fetch(url, { method: 'POST' })
+                            .then(r => r.ok ? console.log("[Callback] RollBackResponse Success") : console.warn(`[Callback] RollBackResponse Failed: ${r.status}`))
+                            .catch(e => console.warn("[Callback] RollBackResponse Error:", e));
+                    } else {
+                        console.warn("[Callback] Missing ReceiptId in Rollback response", data);
+                    }
+                }
+            }
+        } catch (callbackError) {
+            console.warn("Error processing callback logic:", callbackError);
+        }
+        // ----------------------------------------
+
         return data;
 
     } catch (error) {
