@@ -1,77 +1,55 @@
-import { useState, useEffect } from 'react'
-import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
-import { HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr'
-import { fetchReceipts, fetchReceiptProducts } from './api'
-import { sendToPos } from '@/integrations/omnisoft/api'
-import { SignalRNotification } from '@/integrations/omnisoft/types'
+import { useState } from 'react'
+import { useQuery, useMutation, keepPreviousData } from '@tanstack/react-query'
+import { useSearch, useNavigate } from '@tanstack/react-router'
+import { fetchReceipts, fetchReceiptProducts, refreshSale } from './api'
+import { toast } from 'sonner'
 import { ReceiptsTable } from './table'
 import { ProductsPanel } from './products-panel'
-import { getAuthData } from '@/lib/auth'
-import { API_BASE_URL } from '@/lib/constants'
 import type { Receipt } from './types'
-import { ChevronLeft, ChevronRight } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export function ReceiptsPage() {
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [page, setPage] = useState(1)
   const [pageSize] = useState(10)
-  const queryClient = useQueryClient()
 
-  // SignalR Connection
-  useEffect(() => {
-    let isActive = true
-    const auth = getAuthData()
-    const token = auth?.access_token || ''
+  const search: any = useSearch({ strict: false })
+  const navigate = useNavigate()
 
-    const connection = new HubConnectionBuilder()
-      .withUrl(`${API_BASE_URL}/api/WebhookHub?token=${encodeURIComponent(token)}`, {
-        skipNegotiation: true,
-        transport: HttpTransportType.WebSockets
+  const statusFilter = (search.status as 'all' | 'true' | 'false') || 'all'
+
+  const setStatusFilter = (val: 'all' | 'true' | 'false') => {
+    navigate({
+      search: (prev: Record<string, any>) => ({
+        ...prev,
+        status: val === 'all' ? undefined : val
       })
-      .withAutomaticReconnect()
-      .build()
+    } as any)
+  }
 
-    const startConnection = async () => {
-      try {
-        await connection.start()
-        if (isActive) {
-          console.log('SignalR Connected')
-        } else {
-          await connection.stop()
-        }
-      } catch (err) {
-        console.error('SignalR Connection Error: ', err)
-      }
-    }
-
-    startConnection()
-
-    connection.on("posterEvent", async (data: SignalRNotification) => {
-      console.log("New receipt notification received:", data)
-      
-      // Forward to Local POS
-      if (data && data.allData) {
-          await sendToPos(data.allData, token)
-      }
-
-      queryClient.invalidateQueries({ queryKey: ['receipts'] })
-    })
-
-    return () => {
-      isActive = false
-      connection.stop().then(() => console.log('SignalR Disconnected'))
-    }
-  }, [queryClient])
+  // SignalR is now handled globally in _main.tsx
+  // to ensure data is received even when not on this page.
 
   // 1. Query Receipts
   const {
     data,
-    isLoading: isLoadingReceipts,
+    isFetching,
     error: receiptsError
   } = useQuery({
-    queryKey: ['receipts', page, pageSize],
-    queryFn: () => fetchReceipts(page, pageSize),
+    queryKey: ['receipts', page, pageSize, statusFilter],
+    queryFn: () => fetchReceipts(
+      page,
+      pageSize,
+      statusFilter === 'all' ? undefined : statusFilter === 'true'
+    ),
     placeholderData: keepPreviousData
   })
 
@@ -100,6 +78,25 @@ export function ReceiptsPage() {
     setTimeout(() => setSelectedReceipt(null), 300)
   }
 
+  // Refresh Sale Mutation
+  const refreshMutation = useMutation({
+    mutationFn: (receiptId: string) => refreshSale(receiptId),
+    onSuccess: () => {
+      toast.success("Satış yenilənməsi sorğusu göndərildi.")
+    },
+    onError: (error) => {
+      toast.error(`Xəta baş verdi: ${error.message}`)
+    }
+  })
+
+  const handleRefreshSale = (receipt: Receipt) => {
+    console.log(receipt);
+
+    if (confirm("Bu satışı yeniləmək istədiyinizə əminsiniz?")) {
+      refreshMutation.mutate(receipt.transaction_id)
+    }
+  }
+
   const handlePreviousPage = () => {
     setPage((prev) => Math.max(prev - 1, 1))
   }
@@ -123,6 +120,34 @@ export function ReceiptsPage() {
           </button>
         </div>
 
+        {/* Filters */}
+        <div className="px-4 py-2 flex items-center gap-2">
+          <div className="w-48">
+            <Select
+              value={statusFilter}
+              onValueChange={(val: 'all' | 'true' | 'false') => {
+                setStatusFilter(val)
+                setPage(1)
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Hamısı</SelectItem>
+                <SelectItem value="true">Tamamlandı</SelectItem>
+                <SelectItem value="false">Tamamlanmadı</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {isFetching && (
+            <div className="flex items-center text-sm text-gray-500 animate-pulse">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Yüklənir...
+            </div>
+          )}
+        </div>
+
         {/* Content */}
         <div className="p-4 space-y-4">
           {receiptsError && (
@@ -133,8 +158,9 @@ export function ReceiptsPage() {
 
           <ReceiptsTable
             receipts={receipts}
-            isLoading={isLoadingReceipts}
+            isLoading={isFetching} // Use isFetching to show loading state during refetch/filter changes
             onView={handleViewReceipt}
+            onRefresh={handleRefreshSale}
           />
 
           {/* Pagination Controls */}

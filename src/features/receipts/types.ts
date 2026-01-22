@@ -37,6 +37,7 @@ export type Receipt = {
   table_id: string
   name: string
   fiscalId: string
+  innalokTaxStatus?: boolean
 }
 
 // src/features/receipts/productTypes.ts

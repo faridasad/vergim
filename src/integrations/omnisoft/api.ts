@@ -113,7 +113,6 @@ export const sendToPos = async (requestData: any, posterToken?: string) => {
 
         if (!activeDevice.token) {
             console.warn("Active device has no session token. Please login via Local Devices page.");
-            // Optional: Could trigger a toast here if we were in a component
             return;
         }
 

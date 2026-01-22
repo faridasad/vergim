@@ -1,8 +1,8 @@
 import { getAuthData } from '@/lib/auth'
-import type { Receipt, ReceiptProduct, ReceiptsResponse } from './types'
+import type { ReceiptProduct, ReceiptsResponse } from './types'
 import { API_BASE_URL } from '@/lib/constants'
 
-export async function fetchReceipts(page = 1, pageSize = 10): Promise<ReceiptsResponse> {
+export async function fetchReceipts(page = 1, pageSize = 10, innalokTaxStatus?: boolean): Promise<ReceiptsResponse> {
   const auth = getAuthData()
   if (!auth) throw new Error('Authentication missing')
 
@@ -11,6 +11,10 @@ export async function fetchReceipts(page = 1, pageSize = 10): Promise<ReceiptsRe
   url.searchParams.set('accountNumber', auth.account_number)
   url.searchParams.set('page', page.toString())
   url.searchParams.set('pageSize', pageSize.toString())
+
+  if (innalokTaxStatus !== undefined) {
+    url.searchParams.set('Status', String(innalokTaxStatus))
+  }
 
   const res = await fetch(url.toString(), {
     method: 'GET',
@@ -60,4 +64,25 @@ export async function fetchReceiptProducts(receiptId: number): Promise<ReceiptPr
 
   const text = await res.text()
   return text ? JSON.parse(text) : []
+}
+
+export async function refreshSale(receiptId: string): Promise<boolean> {
+  const auth = getAuthData()
+  if (!auth) throw new Error('Authentication missing')
+
+  const url = new URL(`${API_BASE_URL}/api/Tax/RefreshSale`)
+  url.searchParams.set('Token', auth.access_token)
+  url.searchParams.set('ReceiptId', String(receiptId))
+
+  const res = await fetch(url.toString(), {
+    method: 'POST',
+    headers: { Accept: 'application/json, text/plain, */*' },
+  })
+
+  // Returns 200 OK on success, so we just check ok status
+  if (!res.ok) {
+    throw new Error(`Refresh failed: ${res.status}`)
+  }
+
+  return true
 }

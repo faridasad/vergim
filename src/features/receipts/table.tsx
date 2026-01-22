@@ -1,4 +1,4 @@
-import { Eye } from 'lucide-react'
+import { Eye, RefreshCw } from 'lucide-react'
 import type { Receipt } from './types'
 import { formatMoney } from './utils'
 
@@ -6,9 +6,10 @@ interface ReceiptsTableProps {
   receipts: Receipt[]
   isLoading: boolean
   onView: (receipt: Receipt) => void
+  onRefresh: (receipt: Receipt) => void
 }
 
-export function ReceiptsTable({ receipts, isLoading, onView }: ReceiptsTableProps) {
+export function ReceiptsTable({ receipts, isLoading, onView, onRefresh }: ReceiptsTableProps) {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center text-gray-500">
@@ -33,6 +34,7 @@ export function ReceiptsTable({ receipts, isLoading, onView }: ReceiptsTableProp
             <tr>
               <th className="px-4 py-3">Tranzaksiya</th>
               {/* <th className="px-4 py-3">Ödəniş növü</th> */}
+              <th className="px-4 py-3 text-center">Status</th>
               <th className="px-4 py-3 text-right">Məbləğ (₼)</th>
               <th className="px-4 py-3 text-center">Bax</th>
             </tr>
@@ -48,6 +50,33 @@ export function ReceiptsTable({ receipts, isLoading, onView }: ReceiptsTableProp
                     {receipt.pay_type || 'Naməlum'}
                   </span>
                 </td> */}
+                <td className="px-4 py-3 text-center">
+                  {receipt.innalokTaxStatus === true && (
+                    <span className="inline-flex items-center rounded-md bg-green-50 px-2 py-1 text-xs font-medium text-green-700 ring-1 ring-inset ring-green-600/20">
+                      Tamamlandı
+                    </span>
+                  )}
+                  {receipt.innalokTaxStatus === false && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10">
+                        Tamamlanmadı
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onRefresh(receipt)
+                        }}
+                        className="p-1 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-full transition-all"
+                        title="Yenilə"
+                      >
+                        <RefreshCw size={14} />
+                      </button>
+                    </div>
+                  )}
+                  {receipt.innalokTaxStatus === undefined && (
+                    <span className="text-gray-400">-</span>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-right font-semibold text-gray-900">
                   {formatMoney(receipt.payed_sum)}
                 </td>
