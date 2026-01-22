@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --port 4321",
-    "build": "vite build",
+    "build": "vite build && cp dist/sw.js .output/public/ && cp dist/workbox-*.js .output/public/",
     "build:dev": "vite build --mode development",
     "build:prod": "vite build --mode production",
     "start": "PORT=4321 node .output/server/index.mjs",
@@ -61,6 +61,7 @@
     "jsdom": "^27.0.0",
     "typescript": "^5.7.2",
     "vite": "^7.1.7",
+    "vite-plugin-pwa": "^1.2.0",
     "vitest": "^3.0.5",
     "web-vitals": "^5.1.0"
   }
