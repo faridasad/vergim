@@ -20,9 +20,10 @@ const config = defineConfig({
     viteReact(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png'],
       manifest: false,
       workbox: {
+        clientsClaim: true,
+        skipWaiting: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         cleanupOutdatedCaches: true,
         runtimeCaching: [
@@ -42,6 +43,7 @@ const config = defineConfig({
           },
         ],
       },
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'maskable-icon.png', 'offline.html'],
     })
   ],
 })
