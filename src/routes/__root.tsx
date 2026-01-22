@@ -20,8 +20,14 @@ export const Route = createRootRouteWithContext<MyRouterContext>()({
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { title: 'innalok' },
+      { name: 'theme-color', content: '#ffffff' },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [
+      { rel: 'stylesheet', href: appCss },
+      { rel: 'manifest', href: '/manifest.json' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+      { rel: 'icon', type: 'image/png', href: '/favicon.ico' },
+    ],
   }),
   component: RootComponent,
 })
@@ -45,6 +51,17 @@ function RootComponent() {
         </QueryClientProvider>
 
         <Scripts />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                  navigator.serviceWorker.register('/sw.js');
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   )
