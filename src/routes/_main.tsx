@@ -4,6 +4,7 @@ import { AuthGuard } from '@/lib/auth-guards'
 
 import { createFileRoute, Outlet } from '@tanstack/react-router'
 import { SignalRProvider } from '@/contexts/SignalRContext'
+import { POSProvider } from '@/contexts/POSContext'
 
 
 export const Route = createFileRoute('/_main')({
@@ -13,13 +14,15 @@ export const Route = createFileRoute('/_main')({
 function RouteComponent() {
   return (
     <AuthGuard>
-      <SignalRProvider>
-        <div className="pb-20">
-          <Header />
-          <Outlet />
-          <Tabs />
-        </div>
-      </SignalRProvider>
+      <POSProvider>
+        <SignalRProvider>
+          <div className="pb-20">
+            <Header />
+            <Outlet />
+            <Tabs />
+          </div>
+        </SignalRProvider>
+      </POSProvider>
     </AuthGuard>
   )
 }

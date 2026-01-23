@@ -7,13 +7,14 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { clearAuthData, getAuthData } from "@/lib/auth";
-import { User, LogOut } from "lucide-react";
-
-
+import { User, LogOut, Monitor, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { usePOS } from "@/contexts/POSContext";
+import { cn } from "@/lib/utils";
 
 function Header() {
   const navigate = useNavigate()
   const auth = getAuthData()
+  const { isOnline, activeDevice, isChecking } = usePOS()
 
   const handleLogout = () => {
     clearAuthData()
@@ -22,11 +23,32 @@ function Header() {
 
   return (
     <header className="px-4 flex items-center justify-between mt-6 pb-4">
-      <Link to="/home" className="flex items-center">
-        <Logo variant="header" className="h-6.75 object-contain" />
-        <span className="text-[14px] text-foreground ml-2 font-medium">innalok</span>
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link to="/home" className="flex items-center">
+          <Logo variant="header" className="h-6.75 object-contain" />
+          <span className="text-[14px] text-foreground ml-2 font-medium">innalok</span>
+        </Link>
 
+        {activeDevice && (
+          <div className={cn(
+            "hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all animate-in fade-in slide-in-from-left-2",
+            isOnline
+              ? "bg-green-50 text-green-700 border-green-200"
+              : "bg-red-50 text-red-700 border-red-200"
+          )}>
+            <div className="relative">
+              <Monitor className="w-3.5 h-3.5" />
+              {isChecking && (
+                <div className="absolute -top-1 -right-1">
+                  <RefreshCw className="w-2 h-2 animate-spin text-primary" />
+                </div>
+              )}
+            </div>
+            <span className="max-w-[120px] truncate">{activeDevice.name}</span>
+            {isOnline ? <CheckCircle className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-2">
         {auth && (

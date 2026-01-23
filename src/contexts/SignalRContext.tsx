@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { HubConnectionBuilder, HttpTransportType, HubConnectionState } from '@microsoft/signalr'
+import { HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr'
 import { useQueryClient } from '@tanstack/react-query'
 import { getAuthData } from '@/lib/auth'
 import { API_BASE_URL } from '@/lib/constants'
@@ -63,7 +63,12 @@ export function SignalRProvider({ children }: { children: ReactNode }) {
 
             // Forward to Local POS
             if (data && data.allData) {
-                await sendToPos(data.allData, token)
+                const autoSend = localStorage.getItem('invoys_auto_send_to_pos')
+                if (autoSend !== 'false') { // Default to true if not set
+                    await sendToPos(data.allData, token)
+                } else {
+                    console.log("Auto-send to POS is disabled.")
+                }
             }
 
             // Always invalidate receipts query so data is fresh
